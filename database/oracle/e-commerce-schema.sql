@@ -1,0 +1,74 @@
+-- SAFE DROP (ignore error nếu table chưa tồn tại)
+
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE Order_Items CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE Orders CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE Products CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE Users CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE Categories CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+
+-- 1. Categories Table
+CREATE TABLE Categories (
+    category_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    category_name VARCHAR2(100) NOT NULL UNIQUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+-- 2. Users Table
+CREATE TABLE Users (
+    user_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    full_name VARCHAR2(255) NOT NULL,
+    email VARCHAR2(255) NOT NULL UNIQUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_email_format CHECK (REGEXP_LIKE(email, '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'))
+);
+
+-- 3. Products Table
+CREATE TABLE Products (
+    product_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name VARCHAR2(255) NOT NULL,
+    price NUMBER(12, 2) NOT NULL,
+    stock_quantity INT NOT NULL,
+    category_id INT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_prod_category FOREIGN KEY (category_id) REFERENCES Categories(category_id),
+    CONSTRAINT chk_prod_price CHECK (price >= 0),
+    CONSTRAINT chk_prod_stock CHECK (stock_quantity >= 0)
+);
+
+-- 4. Orders Table
+CREATE TABLE Orders (
+    order_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id INT NOT NULL,
+    order_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    total_amount NUMBER(12, 2) DEFAULT 0 NOT NULL, -- Denormalized for read performance
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_order_user FOREIGN KEY (user_id) REFERENCES Users(user_id),
+    CONSTRAINT chk_order_total CHECK (total_amount >= 0)
+);
+
+-- 5. Order_Items Table
+CREATE TABLE Order_Items (
+    item_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL,
+    unit_price NUMBER(12, 2) NOT NULL, -- Snapshot of price at time of purchase
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_item_order FOREIGN KEY (order_id) REFERENCES Orders(order_id) ON DELETE CASCADE,
+    CONSTRAINT fk_item_product FOREIGN KEY (product_id) REFERENCES Products(product_id),
+    CONSTRAINT uq_order_product UNIQUE (order_id, product_id),
+    CONSTRAINT chk_item_qty CHECK (quantity > 0),
+    CONSTRAINT chk_item_price CHECK (unit_price >= 0)
+);
