@@ -128,6 +128,10 @@ BEGIN
 END;
 /
 
+ALTER TABLE Users ADD hashed_password VARCHAR2(255);
+UPDATE Users SET hashed_password = '$2b$10$LHTYQWrH7cPASbqvIKymEuSb2woBvHBn/FEGOa1oXyL7zVcEvDka6';
+ALTER TABLE Users MODIFY hashed_password VARCHAR2(255) NOT NULL;
+
 --------------------------------------------------------------------------------
 -- 2. PERFORMANCE BENCHMARKING (INDEX VS NO INDEX)
 --------------------------------------------------------------------------------
