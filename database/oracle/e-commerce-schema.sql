@@ -1,4 +1,4 @@
--- SAFE DROP (ignore error nếu table chưa tồn tại)
+-- SAFE DROP (ignore error if tables don't exist)
 
 BEGIN EXECUTE IMMEDIATE 'DROP TABLE Order_Items CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
 /
