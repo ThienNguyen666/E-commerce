@@ -54,19 +54,9 @@ A full-stack e-commerce application designed to demonstrate **real-world backend
 
 ### 1. Setup Oracle Database
 
-1. Switch to PDB:
+1. Login Oracle Database as SYS
 
-```sql
-ALTER SESSION SET CONTAINER = freepdb1;
-```
-
-2. Create user:
-```sql
-CREATE USER your_username IDENTIFIED BY your_password;
-GRANT CONNECT, RESOURCE TO your_username;
-```
-
-3. Run schema & seed scripts:
+2. Run schema & seed scripts:
 ```bash
 database/oracle/e-commerce-schema.sql
 database/oracle/e-commerce-data.sql
@@ -116,11 +106,11 @@ Create a `.env` file in the backend folder:
 JWT_SECRET = your_jwt_secret_key
 
 # ================== ORACLE DB ==================
-ORACLE_USER=your_user
+ORACLE_USER=SYS
 ORACLE_PASSWORD=your_password
 ORACLE_HOST=localhost
 ORACLE_PORT=1521
-ORACLE_SERVICE_NAME=freepdb1
+ORACLE_SERVICE_NAME=FREE
 
 # ================== REDIS ==================
 REDIS_HOST=localhost
