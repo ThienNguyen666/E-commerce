@@ -26,4 +26,23 @@ const authMiddleware = (req, res, next) => {
       }
 }
 
-module.exports = {authMiddleware};
+const validateRegister = (req, res, next) => {
+      const { full_name, email, password } = req.body;
+
+      if (!full_name || !email || !password) {
+            return res.status(400).json({ success: false, message: 'Please fill in enough information' });
+      }
+
+      if (password.length < 8) {
+            return res.status(400).json({ success: false, message: 'Password must have at least 8 characters' });
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+            return res.status(400).json({ success: false, message: 'Invalid email' });
+      }
+
+      next();
+};
+
+module.exports = {authMiddleware, validateRegister};

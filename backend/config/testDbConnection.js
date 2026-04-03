@@ -1,5 +1,5 @@
 const { initPool, connectDB, closePool } = require("./oracle");
-const { connectRedis } = require("./redis");
+const { client,connectRedis } = require("./redis");
 
 async function testDbConnection() {
       let connection;
@@ -23,17 +23,18 @@ async function testDbConnection() {
             console.log("Redis OK");
 
             console.log("All connections successful");
-            process.exit(0);
 
       } catch (error) {
             console.error("Connection failed:", error);
-            process.exit(1);
-
       } finally {
             if (connection) {
                   await connection.close();
             }
 
+            if(client.isOpen){
+                  client.destroy();
+                  console.log("Redis destroyed");
+            }
             await closePool();
       }   
 }
