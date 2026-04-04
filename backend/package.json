@@ -18,6 +18,7 @@
     "jsonwebtoken": "^9.0.3",
     "nodemon": "^3.1.14",
     "oracledb": "^6.10.0",
-    "redis": "^5.11.0"
+    "redis": "^5.11.0",
+    "express-rate-limit": "^8.3.2"
   }
 }
