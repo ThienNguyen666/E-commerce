@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 const jwt = require("jsonwebtoken");
+const validator = require("validator");
 
 const authMiddleware = (req, res, next) => {
       try{
@@ -37,11 +38,14 @@ const validateRegister = (req, res, next) => {
             return res.status(400).json({ success: false, message: 'Password must have at least 8 characters' });
       }
 
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-            return res.status(400).json({ success: false, message: 'Invalid email' });
+      if (email.length > 254) {
+            return res.status(400).json({ success: false, message: 'Email is too long' });
       }
 
+      if (!validator.isEmail(email)) {
+            return res.status(400).json({ success: false, message: 'Invalid email' });
+      }
+      
       next();
 };
 
