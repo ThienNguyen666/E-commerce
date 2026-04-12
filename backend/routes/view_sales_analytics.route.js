@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 
 const RateLimit = require("express-rate-limit");
+const { authMiddleware } = require("../middleware/auth.middleware");
+const { adminMiddleware } = require("../middleware/admin.middleware");
 
 const viewSalesAnalyticsController = require("../controllers/view_sales_analytics.controller");
 
@@ -10,6 +12,6 @@ const analyticsLimiter = RateLimit({
   max: 100, // limit each IP to 100 requests per windowMs for analytics
 });
 
-router.get("/analytics", analyticsLimiter, viewSalesAnalyticsController.viewSalesAnalytics);
+router.get("/analytics", analyticsLimiter, authMiddleware, adminMiddleware, viewSalesAnalyticsController.viewSalesAnalytics);
 
 module.exports = router;
