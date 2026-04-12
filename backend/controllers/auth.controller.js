@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const db = require('../config/oracle');
 const { generateToken } = require('../utils/auth.util');
+const { isAdminEmail } = require('../utils/admin.util');
 
 const register = async (req, res, next) => {
       const { full_name, email, password } = req.body;
@@ -50,7 +51,7 @@ const register = async (req, res, next) => {
                   success: true,
                   message: 'Registered successfully',
                   token,
-                  user: { id: userId, full_name, email }
+                  user: { id: userId, full_name, email, is_admin: isAdminEmail(email) }
             });
 
       } catch (error) {
@@ -102,7 +103,8 @@ const login = async (req, res, next) => {
                   user: {
                   id: user.USER_ID,
                   full_name: user.FULL_NAME,
-                  email: user.EMAIL
+                  email: user.EMAIL,
+                  is_admin: isAdminEmail(user.EMAIL)
                   }
             });
 

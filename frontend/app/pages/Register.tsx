@@ -1,45 +1,48 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { ChangeEvent, SyntheticEvent } from "react";
-import type { Route } from "./+types/Register";
 import { useNavigate } from "react-router";
+import { authAPI } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 interface RegisterForm {
-  name: string;
+  full_name: string;
   email: string;
   password: string;
   confirmPassword: string;
 }
 
 export default function Register() {
+  const navigate = useNavigate();
+  const { login, isAuthenticated, user } = useAuth();
+
   const [formData, setFormData] = useState<RegisterForm>({
-    name: "",
+    full_name: "",
     email: "",
     password: "",
     confirmPassword: "",
   });
   const [error, setError] = useState("");
-  const navigate = useNavigate();
-  
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) navigate(user?.is_admin ? "/admin" : "/products");
+  }, [isAuthenticated, user?.is_admin, navigate]);
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const { name, email, password, confirmPassword } = formData;
+    const { full_name, email, password, confirmPassword } = formData;
 
-    if (!name || !email || !password || !confirmPassword) {
+    if (!full_name || !email || !password || !confirmPassword) {
       setError("All fields are required");
       return;
     }
 
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      setError("Invalid email address");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
       return;
     }
 
@@ -48,27 +51,37 @@ export default function Register() {
       return;
     }
 
-    // Mock registration
-    navigate("/login"); // redirect sang login
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await authAPI.register(full_name, email, password);
+      login(res.token, res.user);
+      navigate(res.user?.is_admin ? "/admin" : "/products");
+    } catch (err: any) {
+      setError(err.message || "Registration failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
+    <div className="flex items-center justify-center min-h-[calc(100vh-64px)] bg-gray-50 px-4 py-8">
       <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md">
         <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">Register</h2>
-        {error && <p className="text-red-500 mb-4">{error}</p>}
+        {error && <p className="text-red-500 mb-4 text-sm">{error}</p>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="full_name" className="block text-sm font-medium text-gray-700">
               Full Name
             </label>
             <input
-              id="name"
-              name="name"
+              id="full_name"
+              name="full_name"
               type="text"
-              value={formData.name}
+              value={formData.full_name}
               onChange={handleChange}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2"
+              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border"
               placeholder="John Doe"
               required
             />
@@ -83,7 +96,7 @@ export default function Register() {
               type="email"
               value={formData.email}
               onChange={handleChange}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2"
+              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border"
               placeholder="you@example.com"
               required
             />
@@ -98,7 +111,7 @@ export default function Register() {
               type="password"
               value={formData.password}
               onChange={handleChange}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2"
+              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border"
               placeholder="********"
               required
             />
@@ -113,7 +126,7 @@ export default function Register() {
               type="password"
               value={formData.confirmPassword}
               onChange={handleChange}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2"
+              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border"
               placeholder="********"
               required
             />
@@ -130,9 +143,10 @@ export default function Register() {
           </div>
           <button
             type="submit"
-            className="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+            disabled={loading}
+            className="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-60"
           >
-            Register
+            {loading ? "Registering..." : "Register"}
           </button>
         </form>
       </div>

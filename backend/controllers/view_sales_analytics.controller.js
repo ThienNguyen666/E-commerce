@@ -1,8 +1,5 @@
 const db = require('../config/oracle');
-const redis = require('redis');
-
-const redisClient = redis.createClient(); 
-redisClient.connect().catch(console.error);
+const { client: redisClient } = require('../config/redis');
 
 const viewSalesAnalytics = async (req, res, next) => {
       let connection;
