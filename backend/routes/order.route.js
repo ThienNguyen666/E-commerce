@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const ctrl = require('../controllers/order.controller');
+const orderController = require('../controllers/order.controller');
 const { authMiddleware } = require('../middleware/auth.middleware');
+const { moderateLimiter, strictLimiter } = require('../middleware/rate_limiters.middleware');
 
 router.use(authMiddleware);
 
-router.post('/',    ctrl.placeOrder);
-router.get('/',     ctrl.getMyOrders);
-router.get('/:id',  ctrl.getOrderById);
+router.post('/', strictLimiter, orderController.placeOrder);
+router.get('/', moderateLimiter, orderController.getMyOrders);
+router.get('/:id', moderateLimiter, orderController.getOrderById);
 
 module.exports = router;

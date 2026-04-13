@@ -17,6 +17,9 @@ const errorHandler = require("./middleware/error_handler.middleware");
 
 server.use(express.json());
 
+// Trust proxy for rate limiting behind reverse proxy
+server.set('trust proxy', 1);
+
 // CORS for frontend (dev)
 server.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "http://localhost:5173");

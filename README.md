@@ -103,7 +103,10 @@ npm install
 Create a `.env` file in the backend folder:
 
 ```env
-JWT_SECRET = your_jwt_secret_key
+JWT_SECRET=your_jwt_secret_key
+JWT_EXPIRE=
+PORT=3000
+NODE_ENV=development
 
 # ================== ORACLE DB ==================
 ORACLE_USER=SYS
@@ -111,11 +114,14 @@ ORACLE_PASSWORD=your_password
 ORACLE_HOST=localhost
 ORACLE_PORT=1521
 ORACLE_SERVICE_NAME=FREE
+ORACLE_PRIVILEGE=SYSDBA
 
 # ================== REDIS ==================
 REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_PASSWORD=
+
+ADMIN_EMAILS=
 ```
 
 ### 5. Run Application
