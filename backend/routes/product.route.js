@@ -1,15 +1,16 @@
 // backend/routes/product.route.js
 const express = require('express');
 const router = express.Router();
-const ctrl = require('../controllers/product.controller');
+const productController = require('../controllers/product.controller');
 const { authMiddleware } = require('../middleware/auth.middleware');
 const { adminMiddleware } = require('../middleware/admin.middleware');
+const { moderateLimiter, flexibleLimiter } = require('../middleware/rate_limiters.middleware');
 
-router.get('/categories', ctrl.getCategories);
-router.get('/',    ctrl.getAllProducts);
-router.get('/:id', ctrl.getProductById);
-router.post('/',       authMiddleware, adminMiddleware, ctrl.createProduct);
-router.put('/:id',     authMiddleware, adminMiddleware, ctrl.updateProduct);
-router.delete('/:id',  authMiddleware, adminMiddleware, ctrl.deleteProduct);
+router.get('/categories', moderateLimiter, productController.getCategories);
+router.get('/', moderateLimiter, productController.getAllProducts);
+router.get('/:id', moderateLimiter, productController.getProductById);
+router.post('/', flexibleLimiter, authMiddleware, adminMiddleware, productController.createProduct);
+router.put('/:id', flexibleLimiter, authMiddleware, adminMiddleware, productController.updateProduct);
+router.delete('/:id', flexibleLimiter, authMiddleware, adminMiddleware, productController.deleteProduct);
 
 module.exports = router;
