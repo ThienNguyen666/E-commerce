@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router";
 import { cartAPI, productAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -25,24 +25,48 @@ export default function Products() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [searchName, setSearchName] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [page, setPage] = useState(1);
   const [toast, setToast] = useState("");
 
-  const hasFilters = useMemo(() => Boolean(searchName.trim() || categoryId), [searchName, categoryId]);
+  const hasFilters = useMemo(() => Boolean(searchQuery.trim() || categoryId), [searchQuery, categoryId]);
+
+  // Debounced search handler
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+  };
+
+  const handleSearchSubmit = () => {
+    if (searchInput.trim().length < 2) {
+      setToast("Search term must be at least 2 characters");
+      setTimeout(() => setToast(""), 2000);
+      return;
+    }
+
+    setSearchQuery(searchInput.trim());
+    setPage(1);
+  };  
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSearchSubmit();
+    }
+  };
 
   const loadProducts = async () => {
     setLoading(true);
     setError("");
     try {
       if (hasFilters) {
-        const params: Record<string, string> = { page: "1", limit: "24" };
-        if (searchName.trim()) params.name = searchName.trim();
+        const params: Record<string, string> = { page: String(page), limit: "24" };
+        if (searchQuery.trim()) params.name = searchQuery.trim();
         if (categoryId) params.categoryId = categoryId;
         const res = await productAPI.search(params);
         setProducts(res.data || []);
       } else {
-        const res = await productAPI.getAll(1, 24);
+        const res = await productAPI.getAll(page, 24);
         setProducts(res.data || []);
       }
     } catch (e: any) {
@@ -63,7 +87,19 @@ export default function Products() {
   useEffect(() => {
     if (user?.is_admin) return;
     loadProducts();
-  }, [hasFilters, user?.is_admin]);
+  }, [searchQuery, categoryId, page, user?.is_admin]);
+
+  const handleCategoryChange = (value: string) => {
+    setCategoryId(value);
+    setPage(1);
+  };
+
+  const handleClearFilters = () => {
+    setSearchInput("");
+    setSearchQuery("");
+    setCategoryId("");
+    setPage(1);
+  };
 
   const addToCart = async (productId: number) => {
     if (!isAuthenticated) {
@@ -91,41 +127,62 @@ export default function Products() {
           <p className="text-sm text-gray-500">Browse and search available products</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full md:w-auto">
-          <input
-            value={searchName}
-            onChange={(e) => setSearchName(e.target.value)}
-            placeholder="Search by name"
-            className="border rounded px-3 py-2 text-sm"
-          />
-          <select
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className="border rounded px-3 py-2 text-sm"
-          >
-            <option value="">All categories</option>
-            {categories.map((c) => (
-              <option key={c.CATEGORY_ID} value={String(c.CATEGORY_ID)}>
-                {c.CATEGORY_NAME}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={() => {
-              setSearchName("");
-              setCategoryId("");
-            }}
-            className="bg-gray-100 text-gray-700 rounded px-3 py-2 text-sm hover:bg-gray-200"
-          >
-            Clear filters
-          </button>
+        <div className="flex flex-col gap-3 w-full md:w-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <input
+                value={searchInput}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                placeholder="Search by name (min 2 chars)"
+                className="border rounded px-3 py-2 text-sm w-full"
+              />
+
+            <select
+              value={categoryId}
+              onChange={(e) => handleCategoryChange(e.target.value)}
+              className="border rounded px-3 py-2 text-sm text-gray-700"
+            >
+              <option value="">All categories</option>
+              {categories.map((c) => (
+                <option key={c.CATEGORY_ID} value={String(c.CATEGORY_ID)}>
+                  {c.CATEGORY_NAME}
+                </option>
+              ))}
+            </select>
+
+            <button
+              onClick={handleSearchSubmit}
+              className="bg-blue-600 text-white rounded px-3 py-2 text-sm hover:bg-blue-700"
+            >
+              Search
+            </button>
+
+            <button
+              onClick={handleClearFilters}
+              className="bg-gray-100 text-gray-700 rounded px-3 py-2 text-sm hover:bg-gray-200 transition"
+            >
+              Clear
+            </button>
+          </div>
+          {searchQuery && (
+            <p className="text-xs text-gray-600">
+              Searching for: <span className="font-medium">"{searchQuery}"</span>
+              {categoryId && ` in category: ${categories.find(c => c.CATEGORY_ID === parseInt(categoryId))?.CATEGORY_NAME}`}
+            </p>
+          )}
         </div>
       </div>
 
       {loading && <div className="text-center py-16 text-gray-500">Loading products...</div>}
       {!loading && error && <div className="bg-red-50 text-red-700 p-3 rounded">{error}</div>}
 
-      {!loading && !error && (
+      {!loading && !error && products.length === 0 && (
+        <div className="text-center py-16 text-gray-500">
+          <p>No products found. Try adjusting your search or filters.</p>
+        </div>
+      )}
+
+      {!loading && !error && products.length > 0 && (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {products.map((p) => (
             <div key={p.PRODUCT_ID} className="bg-white rounded-lg shadow p-4 flex flex-col gap-3">
@@ -149,7 +206,7 @@ export default function Products() {
                 <button
                   onClick={() => addToCart(p.PRODUCT_ID)}
                   disabled={p.STOCK_QUANTITY <= 0}
-                  className="flex-1 bg-blue-600 text-white rounded py-1.5 text-sm hover:bg-blue-700 disabled:opacity-40"
+                  className="flex-1 bg-blue-600 text-white rounded py-1.5 text-sm hover:bg-blue-700 disabled:opacity-40 transition"
                 >
                   Add
                 </button>
@@ -157,10 +214,6 @@ export default function Products() {
             </div>
           ))}
         </div>
-      )}
-
-      {!loading && !error && products.length === 0 && (
-        <div className="text-center py-16 text-gray-500">No products found.</div>
       )}
     </div>
   );

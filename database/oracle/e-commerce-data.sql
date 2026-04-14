@@ -1,5 +1,16 @@
 SET SERVEROUTPUT ON;
-SET FEEDBACK OFF;
+
+-- Seed sample vouchers
+INSERT INTO Vouchers (code, discount_type, discount_value, min_order_value, max_uses)
+VALUES ('SAVE10', 'percent', 10, 50, 100);
+
+INSERT INTO Vouchers (code, discount_type, discount_value, min_order_value, max_uses)
+VALUES ('FLAT20', 'fixed', 20, 100, 50);
+
+INSERT INTO Vouchers (code, discount_type, discount_value, min_order_value, max_uses)
+VALUES ('NEWUSER', 'percent', 15, 0, 1000);
+
+COMMIT;
 
 DECLARE
     TYPE t_str_array IS TABLE OF VARCHAR2(100);

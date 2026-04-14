@@ -2,7 +2,13 @@
  * Build search query using dynamic SQL and bind Variables to prevent SQL injection 
  */
 const buildSearchQuery = (filters) => {
-      const { name, minPrice, maxPrice, categoryId, page = 1, limit = 10 } = filters;
+      const { name, minPrice, maxPrice, categoryId } = filters;
+      const page = parseInt(filters.page, 10);
+      const limit = parseInt(filters.limit, 10);
+
+      const pageNumber = Number.isNaN(page) ? 1 : page;
+      const limitNumber = Number.isNaN(limit) ? 10 : limit;
+      const offset = (pageNumber - 1) * limitNumber;
 
       let sql = `
       SELECT p.product_id, p.name, p.price, p.stock_quantity, 
@@ -14,27 +20,31 @@ const buildSearchQuery = (filters) => {
       `;
 
       const binds = {};
-      const offset = (page - 1) * limit;
 
       // Partial match: Case-insensitive
-      if (name) {
+      if (name && name !== '') {
             sql += ` AND LOWER(p.name) LIKE :name`;
             binds.name = `%${name.toLowerCase()}%`;
       }
 
-      if (minPrice) {
+      const minPriceNumber = parseFloat(minPrice);
+      if (minPrice !== undefined && minPrice !== '' && !Number.isNaN(minPriceNumber)) {
             sql += ` AND p.price >= :minPrice`;
-            binds.minPrice = parseFloat(minPrice);
+            binds.minPrice = minPriceNumber;
       }
 
-      if (maxPrice) {
+      const maxPriceNumber = parseFloat(maxPrice);
+      if (maxPrice !== undefined && maxPrice !== '' && !Number.isNaN(maxPriceNumber)) {
             sql += ` AND p.price <= :maxPrice`;
-            binds.maxPrice = parseFloat(maxPrice);
+            binds.maxPrice = maxPriceNumber;
       }
 
-      if (categoryId) {
-            sql += ` AND p.category_id = :categoryId`;
-            binds.categoryId = parseInt(categoryId);
+      if (categoryId !== undefined && categoryId !== '') {
+            const categoryNumber = parseInt(categoryId, 10);
+            if (!Number.isNaN(categoryNumber)) {
+                  sql += ` AND p.category_id = :categoryId`;
+                  binds.categoryId = categoryNumber;
+            }
       }
 
       // Pagination
@@ -42,7 +52,7 @@ const buildSearchQuery = (filters) => {
             OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY`;
 
       binds.offset = offset;
-      binds.limit = parseInt(limit);
+      binds.limit = limitNumber;
 
       return { sql, binds };
 };
