@@ -1,10 +1,3 @@
--- ============================================================
--- E-COMMERCE ORACLE SCHEMA (COMBINED)
--- Combines:
--- 1) e-commerce-schema.sql
--- 2) e-commerce-schema-additions.sql
--- ============================================================
-
 -- SAFE DROP (ignore error if tables do not exist)
 BEGIN EXECUTE IMMEDIATE 'DROP TABLE Voucher_Usage CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
 /
@@ -121,7 +114,7 @@ CREATE TABLE Reviews (
     product_id  INT NOT NULL,
     user_id     INT NOT NULL,
     rating      INT NOT NULL,
-    comment     VARCHAR2(2000),
+    "comment"   VARCHAR2(2000),
     created_at  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_rev_product FOREIGN KEY (product_id) REFERENCES Products(product_id),
@@ -129,15 +122,3 @@ CREATE TABLE Reviews (
     CONSTRAINT chk_rating     CHECK (rating BETWEEN 1 AND 5),
     CONSTRAINT uq_user_product_review UNIQUE (product_id, user_id)
 );
-
--- Seed sample vouchers
-INSERT INTO Vouchers (code, discount_type, discount_value, min_order_value, max_uses)
-VALUES ('SAVE10', 'percent', 10, 50, 100);
-
-INSERT INTO Vouchers (code, discount_type, discount_value, min_order_value, max_uses)
-VALUES ('FLAT20', 'fixed', 20, 100, 50);
-
-INSERT INTO Vouchers (code, discount_type, discount_value, min_order_value, max_uses)
-VALUES ('NEWUSER', 'percent', 15, 0, 1000);
-
-COMMIT;

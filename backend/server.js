@@ -33,8 +33,8 @@ const port = process.env.PORT || 3000;
 
 // Mount routes
 server.use("/api/auth",                  authRoute);
-server.use("/api/products",              productRoute);
 server.use("/api/products",              advancedSearchRoute);          // GET /api/products/search
+server.use("/api/products",              productRoute);
 server.use("/api/products/:id/reviews",  reviewRoute);
 server.use("/api/cart",                  cartRoute);
 server.use("/api/orders",                orderRoute);
