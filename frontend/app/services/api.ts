@@ -66,6 +66,7 @@ export const voucherAPI = {
   getAll:      () => request<any>("/vouchers"),
   validate:    (code: string, order_total: number) =>
     request<any>("/vouchers/validate", { method: "POST", body: JSON.stringify({ code, order_total }) }),
+  getValid:    (order_total: number) => request<any>(`/vouchers/valid?order_total=${order_total}`),
 };
 
 // Reviews
@@ -77,6 +78,8 @@ export const reviewAPI = {
     request<any>(`/products/${productId}/reviews/${reviewId}`, { method: "PUT", body: JSON.stringify(body) }),
   delete:      (productId: number, reviewId: number) =>
     request<any>(`/products/${productId}/reviews/${reviewId}`, { method: "DELETE" }),
+  getUserReviews: () => request<any>("/reviews/my"),
+  getProductsToReview: () => request<any>("/reviews/to-review"),
 };
 
 // Analytics

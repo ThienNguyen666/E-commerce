@@ -7,5 +7,7 @@ const { moderateLimiter, flexibleLimiter } = require('../middleware/rate_limiter
 
 router.get('/', flexibleLimiter, authMiddleware, adminMiddleware, voucherController.getAllVouchers);
 router.post('/validate', moderateLimiter, authMiddleware, voucherController.validateVoucher);
+router.get('/validate', moderateLimiter, authMiddleware, voucherController.validateVoucher); // for testing with GET
+router.get('/valid', moderateLimiter, authMiddleware, voucherController.getAllValidVouchers);
 
 module.exports = router;

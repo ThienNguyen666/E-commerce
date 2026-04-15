@@ -15,6 +15,7 @@ export default function Cart() {
   const [voucherError, setVoucherError] = useState("");
   const [placing,      setPlacing]      = useState(false);
   const [toast,        setToast]        = useState("");
+  const [vouchers,     setVouchers]     = useState<any[]>([]);
 
   useEffect(() => {
     if (!isAuthenticated) { navigate("/login"); return; }
@@ -24,9 +25,19 @@ export default function Cart() {
 
   const loadCart = async () => {
     setLoading(true);
-    try { const r = await cartAPI.get(); setCart(r.data || { items: [], total: 0 }); }
-    catch {}
+    try {
+      const cartRes = await cartAPI.get();
+      setCart(cartRes.data || { items: [], total: 0 });
+      loadVouchers(cartRes.data?.total || 0);
+    } catch {}
     finally { setLoading(false); }
+  };
+
+  const loadVouchers = async (total: number) => {
+    try {
+      const voucherRes = await voucherAPI.getValid(total);
+      setVouchers(voucherRes.data || []);
+    } catch {}
   };
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
@@ -37,6 +48,18 @@ export default function Cart() {
       else          { await cartAPI.add(productId, qty); }
       loadCart(); setVoucherInfo(null);
     } catch (e: any) { showToast(e.message); }
+  };
+
+  const selectVoucher = async (code: string) => {
+    setVoucherCode(code);
+    setVoucherError("");
+    try {
+      const r = await voucherAPI.validate(code, cart.total);
+      setVoucherInfo(r.data);
+    } catch (e: any) {
+      setVoucherError(e.message);
+      setVoucherInfo(null);
+    }
   };
 
   const applyVoucher = async () => {
@@ -109,10 +132,33 @@ export default function Cart() {
 
             {/* Voucher */}
             <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Available Vouchers</label>
+              {vouchers.length > 0 ? (
+                <div className="space-y-1 mb-3">
+                  {vouchers.map((v: any) => (
+                    <button
+                      key={v.VOUCHER_ID}
+                      onClick={() => selectVoucher(v.CODE)}
+                      className="w-full text-left bg-gray-50 hover:bg-gray-100 border rounded p-2 text-sm transition-colors"
+                    >
+                      <div className="font-medium text-blue-600">{v.CODE}</div>
+                      <div className="text-gray-600 text-xs">
+                        {v.DISCOUNT_TYPE === 'percent'
+                          ? `${v.DISCOUNT_VALUE}% off (min $${v.MIN_ORDER_VALUE})`
+                          : `$${v.DISCOUNT_VALUE} off (min $${v.MIN_ORDER_VALUE})`
+                        }
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-xs mb-3">No vouchers available for current order total.</p>
+              )}
+
               <div className="flex gap-2">
                 <input
                   value={voucherCode} onChange={e => setVoucherCode(e.target.value.toUpperCase())}
-                  placeholder="Voucher code"
+                  placeholder="Or enter code manually"
                   className="border rounded px-2 py-1 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
                 />
                 <button onClick={applyVoucher} className="bg-gray-800 text-white px-3 py-1 rounded text-sm hover:bg-gray-700">Apply</button>
