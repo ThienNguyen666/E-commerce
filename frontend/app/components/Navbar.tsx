@@ -2,19 +2,13 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router";
 import { useAuth } from "../context/AuthContext";
-import { cartAPI } from "../services/api";
+import { useCart } from "../context/CartContext";
 
 export default function Navbar() {
   const { user, logout, isAuthenticated } = useAuth();
+  const { cartCount } = useCart();
   const navigate = useNavigate();
-  const [cartCount, setCartCount] = useState(0);
   const isAdmin = Boolean(user?.is_admin);
-
-  useEffect(() => {
-    if (isAuthenticated && !isAdmin) {
-      cartAPI.get().then((r: any) => setCartCount(r.data?.items?.length || 0)).catch(() => {});
-    }
-  }, [isAuthenticated, isAdmin]);
 
   const handleLogout = () => { logout(); navigate("/login"); };
 

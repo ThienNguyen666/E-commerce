@@ -7,10 +7,15 @@ import {
   ScrollRestoration,
 } from "react-router";
 
+import React from "react";
 import type { Route } from "./+types/root";
 import "./app.css";
 import { AuthProvider } from "./context/AuthContext";
+import { CartProvider } from "./context/CartContext";
+import { createQueryClient } from "./lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
 import Navbar from "./components/Navbar";
+import { Toaster } from "react-hot-toast";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -44,11 +49,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const [queryClient] = React.useState(createQueryClient);
   return (
-    <AuthProvider>
-      <Navbar />
-      <Outlet />
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <CartProvider>
+          <Navbar />
+          <Outlet />
+          <Toaster position="top-right" />
+        </CartProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 

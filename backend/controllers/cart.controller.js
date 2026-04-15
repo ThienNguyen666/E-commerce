@@ -64,6 +64,7 @@ const addToCart = async (req, res, next) => {
 
     // Verify product exists and has stock
     let connection;
+    let product;
     try {
       connection = await db.connectDB();
       const result = await connection.execute(
@@ -75,9 +76,7 @@ const addToCart = async (req, res, next) => {
       if (!result.rows[0])
         return res.status(404).json({ success: false, message: 'Product not found' });
 
-      const product = result.rows[0];
-      if (product.STOCK_QUANTITY < quantity)
-        return res.status(400).json({ success: false, message: `Only ${product.STOCK_QUANTITY} items in stock` });
+      product = result.rows[0];
     } finally {
       if (connection) await connection.close();
     }
@@ -87,8 +86,17 @@ const addToCart = async (req, res, next) => {
     const items = raw ? JSON.parse(raw) : [];
     const existingIdx = items.findIndex(i => i.product_id === parseInt(product_id));
 
+    let newQuantity = quantity;
     if (existingIdx >= 0) {
-      items[existingIdx].quantity = quantity;
+      newQuantity = items[existingIdx].quantity + quantity;
+    }
+
+    // Check total quantity against stock
+    if (product.STOCK_QUANTITY < newQuantity)
+      return res.status(400).json({ success: false, message: `Only ${product.STOCK_QUANTITY} items in stock (you already have ${existingIdx >= 0 ? items[existingIdx].quantity : 0})` });
+
+    if (existingIdx >= 0) {
+      items[existingIdx].quantity = newQuantity;
     } else {
       items.push({ product_id: parseInt(product_id), quantity });
     }
