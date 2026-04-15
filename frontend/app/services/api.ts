@@ -15,11 +15,20 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
-  const data = await res.json();
+  try {
+    const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+    const data = await res.json();
 
-  if (!res.ok) throw new Error(data.message || "Request failed");
-  return data;
+    if (!res.ok) {
+      throw new Error(data?.message || `HTTP ${res.status}: ${res.statusText}`);
+    }
+    return data;
+  } catch (error: any) {
+    if (error instanceof SyntaxError) {
+      throw new Error("Invalid response format from server");
+    }
+    throw error;
+  }
 }
 
 // Auth
@@ -34,8 +43,15 @@ export const authAPI = {
 export const productAPI = {
   getAll:      (page = 1, limit = 12) => request<any>(`/products?page=${page}&limit=${limit}`),
   getById:     (id: number)           => request<any>(`/products/${id}`),
-  search:      (params: Record<string, string>) => {
-    const qs = new URLSearchParams(params).toString();
+  search:      (params: Record<string, any>) => {
+    const qs = new URLSearchParams(
+      Object.entries(params).reduce((acc, [key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          acc[key] = String(value);
+        }
+        return acc;
+      }, {} as Record<string, string>)
+    ).toString();
     return request<any>(`/products/search?${qs}`);
   },
   getCategories: ()                   => request<any>("/products/categories"),

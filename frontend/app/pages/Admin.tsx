@@ -164,15 +164,7 @@ export default function Admin() {
     setPage(1);
   }, [searchInput]);
 
-  const handleClearFilters = () => {
-    setSearchInput("");
-    setSearchQuery("");
-    setCategoryFilter("");
-    setPage(1);
-    setError("");
-  };
-
-  const handleCreate = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleCreate = async (event: React.SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
     const errors = validateForm(form);
     setFormErrors(errors);
@@ -442,15 +434,14 @@ export default function Admin() {
         </section>
         <aside className="xl:sticky xl:top-24 xl:self-start max-h-[calc(100vh-6rem)] overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
           <div className="flex items-center justify-between gap-4">
+
             <div>
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Add new product</h2>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 Create a new product quickly with validation and category assignment.
               </p>
             </div>
-            <div className="rounded-2xl bg-blue-500 p-3 text-white shadow-lg">
-              <span className="text-sm font-semibold">Quick add</span>
-            </div>
+          
           </div>
 
           <form onSubmit={handleCreate} className="mt-6 space-y-4">
