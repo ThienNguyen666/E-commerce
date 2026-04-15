@@ -68,4 +68,32 @@ const getAllVouchers = async (req, res, next) => {
   finally { if (connection) await connection.close(); }
 };
 
-module.exports = { validateVoucher, getAllVouchers };
+const getAllValidVouchers = async (req, res, next) => {
+  let connection;
+  try {
+    const { order_total } = req.query;
+    const userId = req.user.id;
+    connection = await db.connectDB();
+    const result = await connection.execute(
+      `SELECT v.voucher_id, v.code, v.discount_type, v.discount_value, v.min_order_value
+        FROM vouchers v
+        WHERE v.is_active = 1
+          AND (v.expires_at IS NULL OR v.expires_at > SYSTIMESTAMP)
+          AND (v.max_uses IS NULL OR v.used_count < v.max_uses)
+          AND v.min_order_value <= :orderTotal
+          AND NOT EXISTS (
+                SELECT 1 FROM Voucher_Usage vu
+                WHERE vu.voucher_id = v.voucher_id AND vu.user_id = :userId
+              )`,
+      { orderTotal: parseFloat(order_total), userId },
+      { outFormat: db.oracledb.OUT_FORMAT_OBJECT }
+    );
+    if(!result.rows[0]){
+      return res.status(400).json({ success: false, message: 'No valid vouchers available for this order total' });
+    }
+    res.status(200).json({ success: true, data: result.rows });
+  } catch (err) { next(err); }
+  finally { if (connection) await connection.close(); }
+};
+
+module.exports = { validateVoucher, getAllVouchers, getAllValidVouchers };

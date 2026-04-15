@@ -8,6 +8,7 @@ router.use(moderateLimiter);
 router.use(authMiddleware);
 
 router.post('/', strictLimiter, orderController.placeOrder);
+router.get('/review-status', moderateLimiter, orderController.getReviewStatus);
 router.get('/', moderateLimiter, orderController.getMyOrders);
 router.get('/:id', moderateLimiter, orderController.getOrderById);
 

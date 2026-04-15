@@ -114,7 +114,7 @@ CREATE TABLE Reviews (
     product_id  INT NOT NULL,
     user_id     INT NOT NULL,
     rating      INT NOT NULL,
-    "comment"   VARCHAR2(2000),
+    comments   VARCHAR2(2000),
     created_at  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_rev_product FOREIGN KEY (product_id) REFERENCES Products(product_id),

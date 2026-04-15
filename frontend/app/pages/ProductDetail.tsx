@@ -15,9 +15,6 @@ export default function ProductDetail() {
   const [qty,       setQty]       = useState(1);
   const [toast,     setToast]     = useState("");
   const [toastErr,  setToastErr]  = useState("");
-  const [rating,    setRating]    = useState(5);
-  const [comment,   setComment]   = useState("");
-  const [submitting, setSubmitting] = useState(false);
 
   const productId = parseInt(id!);
 
@@ -49,19 +46,6 @@ export default function ProductDetail() {
       await cartAPI.add(productId, qty);
       showToast("Added to cart!");
     } catch (e: any) { showToast(e.message, true); }
-  };
-
-  const submitReview = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isAuthenticated) { navigate("/login"); return; }
-    setSubmitting(true);
-    try {
-      await reviewAPI.create(productId, rating, comment);
-      setComment(""); setRating(5);
-      showToast("Review submitted!");
-      loadReviews();
-    } catch (e: any) { showToast(e.message, true); }
-    finally { setSubmitting(false); }
   };
 
   if (!product) return <div className="text-center py-16 text-gray-500">Loading…</div>;
@@ -130,28 +114,6 @@ export default function ProductDetail() {
               })}
             </div>
           </div>
-        )}
-
-        {/* Write a review */}
-        {isAuthenticated && (
-          <form onSubmit={submitReview} className="border rounded-lg p-4 mb-6 bg-blue-50">
-            <h3 className="font-semibold mb-3">Write a Review</h3>
-            <div className="flex gap-1 mb-3">
-              {[1,2,3,4,5].map(s => (
-                <button key={s} type="button" onClick={() => setRating(s)}
-                  className={`text-2xl ${s <= rating ? "text-yellow-400" : "text-gray-300"}`}>★</button>
-              ))}
-            </div>
-            <textarea
-              value={comment} onChange={e => setComment(e.target.value)}
-              placeholder="Share your experience…"
-              className="w-full border rounded p-2 text-sm h-24 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
-            <button type="submit" disabled={submitting}
-              className="mt-2 bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700 disabled:opacity-50">
-              {submitting ? "Submitting…" : "Submit Review"}
-            </button>
-          </form>
         )}
 
         {/* Review list */}

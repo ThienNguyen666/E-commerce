@@ -184,6 +184,45 @@ const getMyOrders = async (req, res, next) => {
   finally { if (connection) await connection.close(); }
 };
 
+// GET /api/orders/review-status?reviewed=true|false — list purchased products grouped by review status
+const getReviewStatus = async (req, res, next) => {
+  let connection;
+  try {
+    const userId = req.user.id;
+    const reviewed = req.query.reviewed === 'true';
+    connection = await db.connectDB();
+
+    const sql = `
+      SELECT p.product_id, p.name, p.price, p.category_id, p.stock_quantity,
+             x.last_order_date,
+             x.total_quantity,
+             r.review_id, r.rating, r.comments AS review_comment, r.created_at AS reviewed_at
+      FROM Products p
+      JOIN (
+        SELECT oi.product_id,
+               MAX(o.order_date) AS last_order_date,
+               SUM(oi.quantity) AS total_quantity
+        FROM Order_Items oi
+        JOIN Orders o ON oi.order_id = o.order_id
+        WHERE o.user_id = :userId
+        GROUP BY oi.product_id
+      ) x ON x.product_id = p.product_id
+      LEFT JOIN Reviews r ON r.product_id = p.product_id AND r.user_id = :userId
+      WHERE ${reviewed ? 'r.review_id IS NOT NULL' : 'r.review_id IS NULL'}
+      ORDER BY x.last_order_date DESC
+    `;
+
+    const result = await connection.execute(
+      sql,
+      { userId },
+      { outFormat: db.oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    res.status(200).json({ success: true, data: result.rows });
+  } catch (err) { next(err); }
+  finally { if (connection) await connection.close(); }
+};
+
 // GET /api/orders/:id — get order detail
 const getOrderById = async (req, res, next) => {
   let connection;
@@ -222,4 +261,4 @@ const getOrderById = async (req, res, next) => {
   finally { if (connection) await connection.close(); }
 };
 
-module.exports = { placeOrder, getMyOrders, getOrderById };
+module.exports = { placeOrder, getMyOrders, getReviewStatus, getOrderById };

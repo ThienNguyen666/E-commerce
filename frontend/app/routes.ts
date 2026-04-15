@@ -9,6 +9,8 @@ export default [
   route("/cart",               "pages/Cart.tsx"),
   route("/orders",             "pages/Orders.tsx"),
   route("/orders/:id",         "pages/OrderDetail.tsx"),
+  route("/review",             "pages/Review.tsx"),
+  route("/my-review/:id",      "pages/MyReview.tsx"),
   route("/admin",              "pages/Admin.tsx"),
   route("/admin/analytics",    "pages/Analytics.tsx"),
 ] satisfies RouteConfig;

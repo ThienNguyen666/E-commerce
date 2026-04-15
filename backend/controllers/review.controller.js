@@ -12,15 +12,17 @@ const getProductReviews = async (req, res, next) => {
     connection = await db.connectDB();
 
     const result = await connection.execute(
-      `SELECT r.review_id, r.rating, r.comment, r.created_at,
-              u.full_name AS user_name,
-              COUNT(*) OVER() AS total_count
-       FROM Reviews r
-       JOIN Users u ON r.user_id = u.user_id
-       WHERE r.product_id = :productId
-       ORDER BY r.created_at DESC
-       OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY`,
-      { productId, offset, limit },
+      `SELECT review_id, rating, comments AS comment, created_at, user_name, total_count
+       FROM (
+         SELECT r.review_id, r.rating, r.comments, r.created_at,
+                u.full_name AS user_name,
+                COUNT(*) OVER() AS total_count,
+                ROW_NUMBER() OVER (ORDER BY r.created_at DESC) as rn
+         FROM Reviews r
+         JOIN Users u ON r.user_id = u.user_id
+         WHERE r.product_id = :v1
+       ) WHERE rn BETWEEN :v2 + 1 AND :v2 + :v3`,
+      { v1: productId, v2: offset, v3: limit },
       { outFormat: db.oracledb.OUT_FORMAT_OBJECT }
     );
 
@@ -33,8 +35,8 @@ const getProductReviews = async (req, res, next) => {
               SUM(CASE WHEN rating = 2 THEN 1 ELSE 0 END) AS two_star,
               SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END) AS one_star
        FROM Reviews
-       WHERE product_id = :productId`,
-      { productId },
+       WHERE product_id = :v1`,
+      { v1: productId },
       { outFormat: db.oracledb.OUT_FORMAT_OBJECT }
     );
 
@@ -64,8 +66,8 @@ const createReview = async (req, res, next) => {
 
     // Check product exists
     const prodCheck = await connection.execute(
-      `SELECT product_id FROM Products WHERE product_id = :productId`,
-      { productId }
+      `SELECT product_id FROM Products WHERE product_id = :v1`,
+      { v1: productId }
     );
     if (!prodCheck.rows[0])
       return res.status(404).json({ success: false, message: 'Product not found' });
@@ -75,22 +77,20 @@ const createReview = async (req, res, next) => {
     const purchaseCheck = await connection.execute(
       `SELECT 1 FROM Order_Items oi
        JOIN Orders o ON oi.order_id = o.order_id
-       WHERE o.user_id = :userId AND oi.product_id = :productId
+       WHERE o.user_id = :v1 AND oi.product_id = :v2
          AND ROWNUM = 1`,
-      { userId, productId }
+      { v1: userId, v2: productId }
     );
     if (!purchaseCheck.rows[0])
       return res.status(403).json({ success: false, message: 'You must purchase this product before reviewing' });
 
     const result = await connection.execute(
-      `INSERT INTO Reviews (product_id, user_id, rating, comment)
-       VALUES (:productId, :userId, :rating, :comment)
-       RETURNING review_id INTO :reviewId`,
+      `INSERT INTO Reviews (product_id, user_id, rating, comments)
+       VALUES (:v1, :v2, :rating, :cmt)`,
       {
-        productId, userId,
-        rating: parseInt(rating),
-        comment: comment || null,
-        reviewId: { type: db.oracledb.NUMBER, dir: db.oracledb.BIND_OUT }
+        v1: productId, v2: userId,
+        rating: { val: parseInt(rating), type: db.oracledb.NUMBER },
+        cmt: { val: comment || null, type: db.oracledb.STRING }
       },
       { autoCommit: true }
     );
@@ -109,6 +109,83 @@ const createReview = async (req, res, next) => {
   }
 };
 
+// GET /api/reviews/my
+const getUserReviews = async (req, res, next) => {
+  let connection;
+  try {
+    const userId = req.user.id;
+    const page  = parseInt(req.query.page)  || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    connection = await db.connectDB();
+
+    const result = await connection.execute(
+      `SELECT review_id, rating, comments AS comment, created_at, product_id, product_name, category_name
+       FROM (
+         SELECT r.review_id, r.rating, r.comments, r.created_at,
+                p.product_id, p.name AS product_name, c.name AS category_name,
+                COUNT(*) OVER() AS total_count,
+                ROW_NUMBER() OVER (ORDER BY r.created_at DESC) as rn
+         FROM Reviews r
+         JOIN Products p ON r.product_id = p.product_id
+         JOIN Categories c ON p.category_id = c.category_id
+         WHERE r.user_id = :v1
+       ) WHERE rn BETWEEN :v2 + 1 AND :v2 + :v3`,
+      { v1: userId, v2: offset, v3: limit },
+      { outFormat: db.oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    const total = result.rows.length > 0 ? result.rows[0].TOTAL_COUNT : 0;
+    res.status(200).json({
+      success: true,
+      data: result.rows.map(({ TOTAL_COUNT, ...r }) => r),
+      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) }
+    });
+  } catch (err) { next(err); }
+  finally { if (connection) await connection.close(); }
+};
+
+// GET /api/reviews/to-review
+const getProductsToReview = async (req, res, next) => {
+  let connection;
+  try {
+    const userId = req.user.id;
+    const page  = parseInt(req.query.page)  || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    connection = await db.connectDB();
+
+    const result = await connection.execute(
+      `SELECT product_id, name AS product_name, category_name, order_date
+       FROM (
+         SELECT DISTINCT p.product_id, p.name, c.name AS category_name, o.created_at AS order_date,
+                COUNT(*) OVER() AS total_count,
+                ROW_NUMBER() OVER (ORDER BY o.created_at DESC) as rn
+         FROM Order_Items oi
+         JOIN Orders o ON oi.order_id = o.order_id
+         JOIN Products p ON oi.product_id = p.product_id
+         JOIN Categories c ON p.category_id = c.category_id
+         WHERE o.user_id = :v1
+           AND NOT EXISTS (
+             SELECT 1 FROM Reviews r WHERE r.product_id = p.product_id AND r.user_id = :v1
+           )
+       ) WHERE rn BETWEEN :v2 + 1 AND :v2 + :v3`,
+      { v1: userId, v2: offset, v3: limit },
+      { outFormat: db.oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    const total = result.rows.length > 0 ? result.rows[0].TOTAL_COUNT : 0;
+    res.status(200).json({
+      success: true,
+      data: result.rows.map(({ TOTAL_COUNT, ...r }) => r),
+      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) }
+    });
+  } catch (err) { next(err); }
+  finally { if (connection) await connection.close(); }
+};
+
 // PUT /api/products/:productId/reviews/:reviewId
 const updateReview = async (req, res, next) => {
   let connection;
@@ -124,10 +201,14 @@ const updateReview = async (req, res, next) => {
     const result = await connection.execute(
       `UPDATE Reviews
        SET rating = COALESCE(:rating, rating),
-           comment = COALESCE(:comment, comment),
+           comments = COALESCE(:cmt, comments),
            updated_at = CURRENT_TIMESTAMP
-       WHERE review_id = :reviewId AND user_id = :userId`,
-      { rating: rating ? parseInt(rating) : null, comment: comment || null, reviewId, userId },
+       WHERE review_id = :v1 AND user_id = :v2`,
+      { 
+        rating: rating ? { val: parseInt(rating), type: db.oracledb.NUMBER } : null, 
+        cmt: { val: comment || null, type: db.oracledb.STRING }, 
+        v1: reviewId, v2: userId 
+      },
       { autoCommit: true }
     );
 
@@ -148,8 +229,8 @@ const deleteReview = async (req, res, next) => {
 
     connection = await db.connectDB();
     const result = await connection.execute(
-      `DELETE FROM Reviews WHERE review_id = :reviewId AND user_id = :userId`,
-      { reviewId, userId },
+      `DELETE FROM Reviews WHERE review_id = :v1 AND user_id = :v2`,
+      { v1: reviewId, v2: userId },
       { autoCommit: true }
     );
 
@@ -161,4 +242,4 @@ const deleteReview = async (req, res, next) => {
   finally { if (connection) await connection.close(); }
 };
 
-module.exports = { getProductReviews, createReview, updateReview, deleteReview };
+module.exports = { getProductReviews, getUserReviews, getProductsToReview, createReview, updateReview, deleteReview };

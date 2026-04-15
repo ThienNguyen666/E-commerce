@@ -32,6 +32,7 @@ export default function Navbar() {
               </Link>
             )}
             {!isAdmin && <Link to="/orders" className="hover:underline">My Orders</Link>}
+            {!isAdmin && <Link to="/review" className="hover:underline">My Reviews</Link>}
             <span className="text-blue-200">Hi, {user?.full_name?.split(" ")[0]}</span>
             <button onClick={handleLogout} className="bg-white text-blue-700 px-3 py-1 rounded font-medium hover:bg-blue-100">
               Logout

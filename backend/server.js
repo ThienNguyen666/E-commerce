@@ -11,6 +11,7 @@ const cartRoute            = require("./routes/cart.route");
 const orderRoute           = require("./routes/order.route");
 const voucherRoute         = require("./routes/voucher.route");
 const reviewRoute          = require("./routes/review.route");
+const userReviewsRoute     = require("./routes/user_reviews.route");
 const viewSalesAnalyticsRoute = require("./routes/view_sales_analytics.route");
 
 const errorHandler = require("./middleware/error_handler.middleware");
@@ -36,6 +37,7 @@ server.use("/api/auth",                  authRoute);
 server.use("/api/products",              advancedSearchRoute);          // GET /api/products/search
 server.use("/api/products",              productRoute);
 server.use("/api/products/:id/reviews",  reviewRoute);
+server.use("/api/reviews",               userReviewsRoute);
 server.use("/api/cart",                  cartRoute);
 server.use("/api/orders",                orderRoute);
 server.use("/api/vouchers",              voucherRoute);
