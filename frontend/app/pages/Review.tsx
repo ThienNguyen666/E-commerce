@@ -93,8 +93,8 @@ export default function Review() {
                       </p>
                     </div>
                   </div>
-                  {review.COMMENT && (
-                    <p className="text-gray-700 mb-4">{review.COMMENT}</p>
+                  {review.COMMENTS && (
+                    <p className="text-gray-700 mb-4">{review.COMMENTS}</p>
                   )}
                   <button
                     onClick={() => navigate(`/products/${review.PRODUCT_ID}`)}

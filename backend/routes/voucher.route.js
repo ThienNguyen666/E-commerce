@@ -6,6 +6,7 @@ const { adminMiddleware } = require('../middleware/admin.middleware');
 const { moderateLimiter, flexibleLimiter } = require('../middleware/rate_limiters.middleware');
 
 router.get('/', flexibleLimiter, authMiddleware, adminMiddleware, voucherController.getAllVouchers);
+router.get('/my', moderateLimiter, authMiddleware, voucherController.getUserVouchers);
 router.post('/validate', moderateLimiter, authMiddleware, voucherController.validateVoucher);
 router.get('/validate', moderateLimiter, authMiddleware, voucherController.validateVoucher); // for testing with GET
 router.get('/valid', moderateLimiter, authMiddleware, voucherController.getAllValidVouchers);

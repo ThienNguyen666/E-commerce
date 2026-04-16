@@ -68,6 +68,31 @@ const getAllVouchers = async (req, res, next) => {
   finally { if (connection) await connection.close(); }
 };
 
+const getUserVouchers = async (req, res, next) => {
+  let connection;
+  try {
+    const userId = req.user.id;
+    connection = await db.connectDB();
+    const result = await connection.execute(
+      `SELECT v.voucher_id, v.code, v.discount_type, v.discount_value,
+              v.min_order_value, v.max_uses, v.used_count, v.expires_at, v.is_active
+       FROM Vouchers v
+       WHERE v.is_active = 1
+         AND (v.expires_at IS NULL OR v.expires_at > SYSTIMESTAMP)
+         AND (v.max_uses IS NULL OR v.used_count < v.max_uses)
+         AND NOT EXISTS (
+               SELECT 1 FROM Voucher_Usage vu
+               WHERE vu.voucher_id = v.voucher_id AND vu.user_id = :userId
+             )
+       ORDER BY v.created_at DESC`,
+      { userId },
+      { outFormat: db.oracledb.OUT_FORMAT_OBJECT }
+    );
+    res.status(200).json({ success: true, data: result.rows });
+  } catch (err) { next(err); }
+  finally { if (connection) await connection.close(); }
+};
+
 const getAllValidVouchers = async (req, res, next) => {
   let connection;
   try {
@@ -96,4 +121,4 @@ const getAllValidVouchers = async (req, res, next) => {
   finally { if (connection) await connection.close(); }
 };
 
-module.exports = { validateVoucher, getAllVouchers, getAllValidVouchers };
+module.exports = { validateVoucher, getAllVouchers, getUserVouchers, getAllValidVouchers };

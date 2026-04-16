@@ -64,6 +64,7 @@ export const orderAPI = {
 // Vouchers
 export const voucherAPI = {
   getAll:      () => request<any>("/vouchers"),
+  getMine:     () => request<any>("/vouchers/my"),
   validate:    (code: string, order_total: number) =>
     request<any>("/vouchers/validate", { method: "POST", body: JSON.stringify({ code, order_total }) }),
   getValid:    (order_total: number) => request<any>(`/vouchers/valid?order_total=${order_total}`),
