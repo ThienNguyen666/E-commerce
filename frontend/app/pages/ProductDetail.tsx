@@ -32,7 +32,9 @@ export default function ProductDetail() {
       const r = await reviewAPI.getAll(productId);
       setReviews(r.data || []);
       setStats(r.stats);
-    } catch {}
+    } catch (e) {
+  console.error("Load reviews error:", e);
+}
   };
 
   const showToast = (msg: string, err = false) => {
@@ -130,7 +132,7 @@ export default function ProductDetail() {
                     {new Date(r.CREATED_AT).toLocaleDateString()}
                   </span>
                 </div>
-                {r.COMMENT && <p className="text-sm text-gray-700">{r.COMMENT}</p>}
+                {r.COMMENTS && <p className="text-sm text-gray-700">{r.COMMENTS}</p>}
               </div>
             ))}
           </div>

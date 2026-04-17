@@ -12,7 +12,7 @@ const getProductReviews = async (req, res, next) => {
     connection = await db.connectDB();
 
     const result = await connection.execute(
-      `SELECT review_id, rating, comments AS comment, created_at, user_name, total_count
+      `SELECT review_id, rating, comments , created_at, user_name, total_count
        FROM (
          SELECT r.review_id, r.rating, r.comments, r.created_at,
                 u.full_name AS user_name,
@@ -98,7 +98,7 @@ const createReview = async (req, res, next) => {
     res.status(201).json({
       success: true,
       message: 'Review submitted',
-      data: { review_id: result.outBinds.reviewId[0], product_id: productId, rating, comment }
+      data: { product_id: productId, rating, comment }
     });
   } catch (err) {
     if (err.errorNum === 1) // ORA-00001 unique constraint
@@ -121,17 +121,24 @@ const getUserReviews = async (req, res, next) => {
     connection = await db.connectDB();
 
     const result = await connection.execute(
-      `SELECT review_id, rating, comments AS comment, created_at, product_id, product_name, category_name
-       FROM (
-         SELECT r.review_id, r.rating, r.comments, r.created_at,
-                p.product_id, p.name AS product_name, c.name AS category_name,
+      `SELECT review_id, rating, comments , created_at, product_id, product_name, category_name, total_count
+        FROM (
+          SELECT 
+                r.review_id, 
+                r.rating, 
+                r.comments, 
+                r.created_at,
+                p.product_id, 
+                p.name AS product_name, 
+                c.category_name,
                 COUNT(*) OVER() AS total_count,
-                ROW_NUMBER() OVER (ORDER BY r.created_at DESC) as rn
-         FROM Reviews r
-         JOIN Products p ON r.product_id = p.product_id
-         JOIN Categories c ON p.category_id = c.category_id
-         WHERE r.user_id = :v1
-       ) WHERE rn BETWEEN :v2 + 1 AND :v2 + :v3`,
+                ROW_NUMBER() OVER (ORDER BY r.created_at DESC) AS rn
+          FROM Reviews r
+          JOIN Products p ON r.product_id = p.product_id
+          JOIN Categories c ON p.category_id = c.category_id
+          WHERE r.user_id = :v1
+        ) 
+        WHERE rn BETWEEN :v2 + 1 AND :v2 + :v3`,
       { v1: userId, v2: offset, v3: limit },
       { outFormat: db.oracledb.OUT_FORMAT_OBJECT }
     );
@@ -158,20 +165,27 @@ const getProductsToReview = async (req, res, next) => {
     connection = await db.connectDB();
 
     const result = await connection.execute(
-      `SELECT product_id, name AS product_name, category_name, order_date
-       FROM (
-         SELECT DISTINCT p.product_id, p.name, c.name AS category_name, o.created_at AS order_date,
+      `SELECT product_id, product_name, category_name, order_date
+        FROM (
+          SELECT DISTINCT 
+                p.product_id, 
+                p.name AS product_name, 
+                c.category_name AS category_name, 
+                o.created_at AS order_date,
                 COUNT(*) OVER() AS total_count,
                 ROW_NUMBER() OVER (ORDER BY o.created_at DESC) as rn
-         FROM Order_Items oi
-         JOIN Orders o ON oi.order_id = o.order_id
-         JOIN Products p ON oi.product_id = p.product_id
-         JOIN Categories c ON p.category_id = c.category_id
-         WHERE o.user_id = :v1
-           AND NOT EXISTS (
-             SELECT 1 FROM Reviews r WHERE r.product_id = p.product_id AND r.user_id = :v1
-           )
-       ) WHERE rn BETWEEN :v2 + 1 AND :v2 + :v3`,
+          FROM Order_Items oi
+          JOIN Orders o ON oi.order_id = o.order_id
+          JOIN Products p ON oi.product_id = p.product_id
+          JOIN Categories c ON p.category_id = c.category_id
+          WHERE o.user_id = :v1
+            AND NOT EXISTS (
+              SELECT 1 FROM Reviews r 
+              WHERE r.product_id = p.product_id 
+                AND r.user_id = :v1
+            )
+        ) 
+        WHERE rn BETWEEN :v2 + 1 AND :v2 + :v3`,
       { v1: userId, v2: offset, v3: limit },
       { outFormat: db.oracledb.OUT_FORMAT_OBJECT }
     );

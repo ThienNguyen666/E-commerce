@@ -11,6 +11,7 @@ export default [
   route("/orders/:id",         "pages/OrderDetail.tsx"),
   route("/review",             "pages/Review.tsx"),
   route("/my-review/:id",      "pages/MyReview.tsx"),
+  route("/vouchers",           "pages/AllVoucher.tsx"),
   route("/admin",              "pages/Admin.tsx"),
   route("/admin/analytics",    "pages/Analytics.tsx"),
 ] satisfies RouteConfig;
