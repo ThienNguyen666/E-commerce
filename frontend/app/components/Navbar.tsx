@@ -11,6 +11,26 @@ export default function Navbar() {
   const isAdmin = Boolean(user?.is_admin);
 
   const handleLogout = () => { logout(); navigate("/login"); };
+  const [dark, setDark] = useState(false);
+  const toggleTheme = () => {
+    const isDark = document.documentElement.classList.contains("dark");
+
+    if (isDark) {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+      setDark(false);
+    } else {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+      setDark(true);
+    }
+  };
+
+  useEffect(() => {
+    const isDark = localStorage.getItem("theme") === "dark";
+    setDark(isDark);
+    if (isDark) document.documentElement.classList.add("dark");
+  }, []);
 
   return (
     <nav className="bg-blue-700 text-white px-6 py-3 flex items-center justify-between shadow-md">
@@ -35,6 +55,13 @@ export default function Navbar() {
             {!isAdmin && <Link to="/orders" className="hover:underline">My Orders</Link>}
             {!isAdmin && <Link to="/review" className="hover:underline">My Reviews</Link>}
             <span className="text-blue-200">Hi, {user?.full_name?.split(" ")[0]}</span>
+            <button
+              onClick={toggleTheme}
+              className="w-9 h-9 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition"
+              title="Toggle theme"
+            >
+              {dark ? "🌙" : "☀️"}
+            </button>            
             <button onClick={handleLogout} className="bg-white text-blue-700 px-3 py-1 rounded font-medium hover:bg-blue-100">
               Logout
             </button>
