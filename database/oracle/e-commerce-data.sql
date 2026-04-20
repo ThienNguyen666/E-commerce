@@ -188,7 +188,105 @@ SELECT * FROM Products WHERE name LIKE 'Pro%';
 
 SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
 
+DECLARE
+    -- Mảng lời khen (Positive)
+    TYPE t_text_array IS TABLE OF VARCHAR2(500);
+    v_pos_comments t_text_array := t_text_array(
+        'Sản phẩm tuyệt vời, đóng gói rất kỹ lưỡng.',
+        'Chất lượng vượt mong đợi, giao hàng nhanh chóng.',
+        'Rất đáng đồng tiền bát gạo, sẽ ủng hộ shop dài dài.',
+        'Hàng chính hãng, dùng rất mượt mà và ổn định.',
+        'Thiết kế đẹp, cầm rất chắc tay, màu sắc y như hình.',
+        'Nhân viên tư vấn nhiệt tình, sản phẩm quá ổn trong tầm giá.',
+        'Vừa nhận được hàng, test qua thấy rất tốt, 5 sao cho shop!',
+        'Giao hàng siêu tốc, đóng gói cẩn thận, sản phẩm rất ưng ý.'
+    );
+
+    -- Mảng trung bình (Neutral)
+    v_neu_comments t_text_array := t_text_array(
+        'Sản phẩm dùng tạm được, giao hàng hơi chậm một chút.',
+        'Chất lượng tương xứng với giá tiền, không có gì phàn nàn.',
+        'Mọi thứ ổn, nhưng hộp hơi móp do vận chuyển.',
+        'Hàng dùng ok, nhưng màu sắc ngoài thực tế hơi nhạt hơn ảnh.',
+        'Sản phẩm bình thường, chưa có gì quá nổi bật.'
+    );
+
+    -- Mảng lời chê (Negative)
+    v_neg_comments t_text_array := t_text_array(
+        'Chất lượng kém, không giống như mô tả.',
+        'Giao sai màu, làm việc thiếu chuyên nghiệp.',
+        'Sản phẩm mới dùng 2 ngày đã có dấu hiệu hỏng.',
+        'Đóng gói quá sơ sài, hàng bị trầy xước nhiều.',
+        'Quá thất vọng, giá cao mà chất lượng không ra gì.'
+    );
+
+    v_rating      INT;
+    v_comment     VARCHAR2(1000);
+    v_review_date TIMESTAMP WITH TIME ZONE;
+    v_count       INT := 0;
+
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('--- Bắt đầu seeding Reviews ---');
+
+    -- Chỉ lấy User đã thực sự mua hàng (từ Order_Items join Orders)
+    -- Sử dụng Cursor để loop qua các cặp User-Product đã hoàn tất đơn hàng
+    FOR r IN (
+        SELECT DISTINCT o.user_id, oi.product_id, o.order_date
+        FROM Order_Items oi
+        JOIN Orders o ON oi.order_id = o.order_id
+        WHERE ROWNUM <= 5000 -- Giới hạn 5000 review để đảm bảo performance
+    ) LOOP
+        
+        -- 1. Tạo phân phối Rating kiểu thực tế (70% 5 sao, 15% 4 sao, 5% 3 sao, 5% 2 sao, 5% 1 sao)
+        DECLARE
+            v_rand NUMBER := DBMS_RANDOM.VALUE(0, 100);
+        BEGIN
+            IF v_rand < 70 THEN 
+                v_rating := 5;
+                v_comment := v_pos_comments(TRUNC(DBMS_RANDOM.VALUE(1, v_pos_comments.COUNT + 1)));
+            ELSIF v_rand < 85 THEN 
+                v_rating := 4;
+                v_comment := v_pos_comments(TRUNC(DBMS_RANDOM.VALUE(1, v_pos_comments.COUNT + 1)));
+            ELSIF v_rand < 90 THEN 
+                v_rating := 3;
+                v_comment := v_neu_comments(TRUNC(DBMS_RANDOM.VALUE(1, v_neu_comments.COUNT + 1)));
+            ELSIF v_rand < 95 THEN 
+                v_rating := 2;
+                v_comment := v_neg_comments(TRUNC(DBMS_RANDOM.VALUE(1, v_neg_comments.COUNT + 1)));
+            ELSE 
+                v_rating := 1;
+                v_comment := v_neg_comments(TRUNC(DBMS_RANDOM.VALUE(1, v_neg_comments.COUNT + 1)));
+            END IF;
+        END;
+
+        -- 2. Đảm bảo thời gian đánh giá sau thời gian đặt hàng (từ 1 đến 7 ngày)
+        v_review_date := r.order_date + DBMS_RANDOM.VALUE(1, 7);
+
+        -- 3. Insert kèm xử lý trùng lặp (tránh lỗi uq_user_product_review nếu data cũ đã có)
+        BEGIN
+            INSERT INTO Reviews (product_id, user_id, rating, comments, created_at, updated_at)
+            VALUES (r.product_id, r.user_id, v_rating, v_comment, v_review_date, v_review_date);
+            
+            v_count := v_count + 1;
+        EXCEPTION
+            WHEN DUP_VAL_ON_INDEX THEN
+                NULL; -- Bỏ qua nếu user này đã review sản phẩm này rồi
+        END;
+
+        -- Commit theo batch mỗi 500 dòng để tối ưu Undo Log
+        IF MOD(v_count, 500) = 0 THEN
+            COMMIT;
+        END IF;
+
+    END LOOP;
+
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Hoàn tất! Đã thêm ' || v_count || ' đánh giá chất lượng cao.');
+END;
+/
+
 SELECT COUNT(*) FROM Users;
 SELECT COUNT(*) FROM Products;
 SELECT COUNT(*) FROM Orders;
 SELECT COUNT(*) FROM Order_Items;
+SELECT * FROM Reviews;
