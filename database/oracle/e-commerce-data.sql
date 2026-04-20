@@ -1,4 +1,4 @@
-SET SERVEROUTPUT ON;
+--SET SERVEROUTPUT ON;
 
 -- Seed sample vouchers
 INSERT INTO Vouchers (code, discount_type, discount_value, min_order_value, max_uses)
