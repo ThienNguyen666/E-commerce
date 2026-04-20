@@ -68,8 +68,15 @@ export default function Navbar() {
           </>
         ) : (
           <>
+            <button
+              onClick={toggleTheme}
+              className="w-9 h-9 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition"
+              title="Toggle theme"
+            >
+              {dark ? "🌙" : "☀️"}
+            </button>
             <Link to="/login"    className="hover:underline">Login</Link>
-            <Link to="/register" className="bg-white text-blue-700 px-3 py-1 rounded font-medium hover:bg-blue-100">Register</Link>
+            <Link to="/register" className="bg-white text-blue-700 px-3 py-1 rounded font-medium hover:bg-blue-100">Register</Link>    
           </>
         )}
       </div>

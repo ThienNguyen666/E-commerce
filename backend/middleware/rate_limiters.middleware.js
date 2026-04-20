@@ -35,11 +35,11 @@ const strictLimiter = rateLimit({
 /**
  * Rate limiter for public read APIs (e.g., product listings, searches, reviews).
  * Moderate limits to allow reasonable access while preventing abuse.
- * 100 requests per 15 minutes per IP.
+ * 200 requests per 15 minutes per IP.
  */
 const moderateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: 200,
   message: {
     status: 429,
     message: 'Too many requests. Please try again later.'
@@ -55,7 +55,7 @@ const moderateLimiter = rateLimit({
  */
 const flexibleLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50,
+  max: 100,
   message: {
     status: 429,
     message: 'Too many administrative requests. Please try again later.'

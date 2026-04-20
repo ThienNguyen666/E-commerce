@@ -27,7 +27,7 @@ export default function MyReview() {
       return;
     }
     loadProduct();
-  }, [productId, isAuthenticated, user]);
+  }, [productId, isAuthenticated, user, navigate]);
 
   const loadProduct = async () => {
     try {
@@ -40,7 +40,7 @@ export default function MyReview() {
 
   const showToast = (msg: string, err = false) => {
     err ? setToastErr(msg) : setToast(msg);
-    setTimeout(() => err ? setToastErr("") : setToast(""), 3000);
+    setTimeout(() => (err ? setToastErr("") : setToast("")), 3000);
   };
 
   const submitReview = async (e: React.FormEvent) => {
@@ -57,71 +57,105 @@ export default function MyReview() {
     }
   };
 
-  if (!product) return <div className="text-center py-16 text-gray-500">Loading…</div>;
+  if (!product)
+    return (
+      <div className="text-center py-16 text-gray-500 dark:text-gray-400 min-h-screen bg-white dark:bg-gray-950">
+        Loading…
+      </div>
+    );
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      {toast && <div className="fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow z-50">{toast}</div>}
-      {toastErr && <div className="fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded shadow z-50">{toastErr}</div>}
-
-      <div className="bg-white rounded-lg shadow p-6">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">Write a Review</h1>
-
-        {/* Product Info */}
-        <div className="flex items-center gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
-          <div className="text-4xl">📦</div>
-          <div>
-            <h2 className="font-semibold text-lg">{product.NAME}</h2>
-            <p className="text-sm text-gray-600">{product.CATEGORY_NAME}</p>
+    <div className="min-h-screen bg-white dark:bg-gray-950 transition-colors duration-300">
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        {/* Toasts */}
+        {toast && (
+          <div className="fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow-lg z-50 animate-fade-in">
+            {toast}
           </div>
-        </div>
+        )}
+        {toastErr && (
+          <div className="fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded shadow-lg z-50 animate-fade-in">
+            {toastErr}
+          </div>
+        )}
 
-        {/* Review Form */}
-        <form onSubmit={submitReview}>
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Rating</label>
-            <div className="flex gap-1">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setRating(star)}
-                  className={`text-3xl ${star <= rating ? "text-yellow-400" : "text-gray-300"} hover:text-yellow-400`}
-                >
-                  ★
-                </button>
-              ))}
+        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-8">
+          <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-6">Write a Review</h1>
+
+          {/* Product Info Block */}
+          <div className="flex items-center gap-5 mb-8 p-5 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700">
+            <div className="text-5xl bg-white dark:bg-gray-800 w-16 h-16 flex items-center justify-center rounded-lg shadow-sm">
+              📦
             </div>
-            <p className="text-sm text-gray-500 mt-1">{rating} star{rating !== 1 ? 's' : ''}</p>
+            <div>
+              <h2 className="font-bold text-xl text-gray-900 dark:text-gray-100 uppercase tracking-tight">
+                {product.NAME}
+              </h2>
+              <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                {product.CATEGORY_NAME}
+              </p>
+            </div>
           </div>
 
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Comment (Optional)</label>
-            <textarea
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder="Share your experience with this product..."
-              className="w-full border rounded-lg p-3 text-sm h-32 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
-          </div>
+          {/* Review Form */}
+          <form onSubmit={submitReview} className="space-y-8">
+            {/* Rating Stars */}
+            <div>
+              <label className="block text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
+                Rating
+              </label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star)}
+                    className={`text-4xl transition-all hover:scale-125 active:scale-90 ${
+                      star <= rating ? "text-yellow-400" : "text-gray-300 dark:text-gray-700"
+                    }`}
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+              <p className="text-sm font-bold text-gray-400 dark:text-gray-500 mt-2">
+                {rating} star{rating !== 1 ? "s" : ""} -{" "}
+                {["Poor", "Fair", "Good", "Very Good", "Excellent"][rating - 1]}
+              </p>
+            </div>
 
-          <div className="flex gap-3">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              {submitting ? "Submitting…" : "Submit Review"}
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate("/review")}
-              className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+            {/* Comment Area */}
+            <div>
+              <label className="block text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
+                Comment (Optional)
+              </label>
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Share your experience with this product..."
+                className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-gray-900 dark:text-gray-100 text-sm h-40 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-all placeholder:text-gray-400 dark:placeholder:text-gray-600"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-200 dark:shadow-none transition-all active:scale-95 disabled:opacity-50"
+              >
+                {submitting ? "Submitting…" : "Submit Review"}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/review")}
+                className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 font-bold py-3 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
