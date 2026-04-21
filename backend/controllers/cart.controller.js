@@ -129,4 +129,34 @@ const clearCart = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+
+// POST merge redis -> oracle cart on login
+const mergeCart = async (req, res) => {
+    const userId = req.user.user_id;
+    const { guestCart } = req.body; // Danh sách SP từ localStorage gửi lên
+    const cartKey = `cart:${userId}`;
+
+    try {
+        // Lấy giỏ hàng hiện tại trong Redis
+        const existingCartData = await redisClient.get(cartKey);
+        let userCart = existingCartData ? JSON.parse(existingCartData) : [];
+
+        // Nếu trùng ID thì tăng số lượng, nếu mới thì thêm vào
+        guestCart.forEach(guestItem => {
+            const existingItem = userCart.find(item => item.product_id === guestItem.product_id);
+            if (existingItem) {
+                existingItem.quantity += guestItem.quantity;
+            } else {
+                userCart.push(guestItem);
+            }
+        });
+
+        // Lưu vào Redis
+        await redisClient.set(cartKey, JSON.stringify(userCart));
+        res.status(200).json({ message: "Đồng bộ giỏ hàng thành công", cart: userCart });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 module.exports = { getCart, addToCart, removeFromCart, clearCart };

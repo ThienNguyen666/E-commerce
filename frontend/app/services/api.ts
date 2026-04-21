@@ -67,6 +67,7 @@ export const cartAPI = {
     request<any>("/cart", { method: "POST", body: JSON.stringify({ product_id, quantity }) }),
   remove:      (product_id: number)            => request<any>(`/cart/${product_id}`, { method: "DELETE" }),
   clear:       ()                              => request<any>("/cart/clear", { method: "DELETE" }),
+  merge:       (guestCart: any[])              => request<any>("/cart/merge", { method: "POST", body: JSON.stringify({ guestCart }) }),
 };
 
 // Orders

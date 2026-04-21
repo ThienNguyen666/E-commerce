@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import type { SyntheticEvent } from "react";
 import { useNavigate } from "react-router";
-import { authAPI } from "../services/api";
+import { authAPI, cartAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
@@ -31,13 +31,26 @@ export default function Login() {
     try {
       const res = await authAPI.login(email, password);
       login(res.token, res.user);
+      await handleLoginSuccess(res.user);
       navigate(res.user?.is_admin ? "/admin" : "/products");
+
     } catch (err: any) {
       setError(err.message || "Login failed");
     } finally {
       setLoading(false);
     }
   };
+
+  const handleLoginSuccess = async (userData: any) => {
+    const guestCart = JSON.parse(localStorage.getItem('guest_cart') || '[]');
+    
+    if (guestCart.length > 0) {
+        await cartAPI.merge(guestCart);
+        localStorage.removeItem('guest_cart');
+    }
+  };
+
+
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-64px)] bg-gray-50 dark:bg-gray-950 px-4 py-12 transition-colors duration-500">

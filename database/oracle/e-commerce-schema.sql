@@ -29,6 +29,7 @@ CREATE TABLE Users (
     user_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     full_name VARCHAR2(255) NOT NULL,
     email VARCHAR2(255) NOT NULL UNIQUE,
+    hashed_password VARCHAR2(255) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_email_format CHECK (REGEXP_LIKE(email, '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'))
@@ -41,6 +42,7 @@ CREATE TABLE Products (
     price NUMBER(12, 2) NOT NULL,
     stock_quantity INT NOT NULL,
     category_id INT NOT NULL,
+    product_image VARCHAR2(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_prod_category FOREIGN KEY (category_id) REFERENCES Categories(category_id),
