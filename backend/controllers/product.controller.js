@@ -38,7 +38,8 @@ const getProductById = async (req, res, next) => {
     const { id } = req.params;
     connection = await db.connectDB();
     const result = await connection.execute(
-      `SELECT p.*, c.category_name,
+      `SELECT p.product_id, p.name, p.price, p.stock_quantity,
+              p.category_id, p.created_at, p.updated_at, c.category_name,
               ROUND(AVG(r.rating), 1) AS avg_rating,
               COUNT(r.review_id)      AS review_count
        FROM Products p
