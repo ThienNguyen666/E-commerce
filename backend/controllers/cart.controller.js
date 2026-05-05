@@ -53,11 +53,11 @@ const getCart = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-// POST add/update item in cart
+// POST add/update item in cart (ĐÃ FIX LỖI NHẢY SỐ)
 const addToCart = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { product_id, quantity = 1 } = req.body;
+    const { product_id, quantity = 1, is_update = false } = req.body;
 
     if (!product_id || quantity < 1)
       return res.status(400).json({ success: false, message: 'Invalid product_id or quantity' });
@@ -88,12 +88,16 @@ const addToCart = async (req, res, next) => {
 
     let newQuantity = quantity;
     if (existingIdx >= 0) {
-      newQuantity = items[existingIdx].quantity + quantity;
+      if (is_update) {
+        newQuantity = quantity; // Cập nhật bằng số lượng gõ trực tiếp
+      } else {
+        newQuantity = items[existingIdx].quantity + quantity; // Nút Add to Cart thông thường
+      }
     }
 
     // Check total quantity against stock
     if (product.STOCK_QUANTITY < newQuantity)
-      return res.status(400).json({ success: false, message: `Only ${product.STOCK_QUANTITY} items in stock (you already have ${existingIdx >= 0 ? items[existingIdx].quantity : 0})` });
+      return res.status(400).json({ success: false, message: `Chỉ còn ${product.STOCK_QUANTITY} sản phẩm trong kho` });
 
     if (existingIdx >= 0) {
       items[existingIdx].quantity = newQuantity;
@@ -129,7 +133,6 @@ const clearCart = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-
 // POST merge redis -> oracle cart on login
 const mergeCart = async (req, res) => {
     const userId = req.user.user_id;
@@ -137,8 +140,8 @@ const mergeCart = async (req, res) => {
     const cartKey = `cart:${userId}`;
 
     try {
-        // Lấy giỏ hàng hiện tại trong Redis
-        const existingCartData = await redisClient.get(cartKey);
+        // Lấy giỏ hàng hiện tại trong Redis (Lưu ý biến client có thể khác với redisClient tùy thuộc vào import của bạn)
+        const existingCartData = await client.get(cartKey);
         let userCart = existingCartData ? JSON.parse(existingCartData) : [];
 
         // Nếu trùng ID thì tăng số lượng, nếu mới thì thêm vào
@@ -152,7 +155,7 @@ const mergeCart = async (req, res) => {
         });
 
         // Lưu vào Redis
-        await redisClient.set(cartKey, JSON.stringify(userCart));
+        await client.set(cartKey, JSON.stringify(userCart));
         res.status(200).json({ message: "Đồng bộ giỏ hàng thành công", cart: userCart });
     } catch (error) {
         res.status(500).json({ error: error.message });
