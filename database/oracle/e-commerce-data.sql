@@ -46,11 +46,12 @@ BEGIN
     -- 2. Users
     ----------------------------------------------------------------------------
     FOR i IN 1..1000 LOOP
-        INSERT INTO Users (full_name, email)
+        INSERT INTO Users (full_name, email, hashed_password)
         VALUES (
             v_first_names(TRUNC(DBMS_RANDOM.VALUE(1,21))) || ' ' ||
             v_last_names(TRUNC(DBMS_RANDOM.VALUE(1,21))),
-            LOWER(DBMS_RANDOM.STRING('a',5)) || i || '@example.com'
+            LOWER(DBMS_RANDOM.STRING('a',5)) || i || '@example.com',
+            '$2b$10$LHTYQWrH7cPASbqvIKymEuSb2woBvHBn/FEGOa1oXyL7zVcEvDka6'
         );
     END LOOP;
 
@@ -138,10 +139,6 @@ BEGIN
     DBMS_OUTPUT.PUT_LINE('DONE!');
 END;
 /
-
-ALTER TABLE Users ADD hashed_password VARCHAR2(255);
-UPDATE Users SET hashed_password = '$2b$10$LHTYQWrH7cPASbqvIKymEuSb2woBvHBn/FEGOa1oXyL7zVcEvDka6';
-ALTER TABLE Users MODIFY hashed_password VARCHAR2(255) NOT NULL;
 
 --------------------------------------------------------------------------------
 -- 2. PERFORMANCE BENCHMARKING (INDEX VS NO INDEX)
@@ -288,7 +285,16 @@ END;
 SET SERVEROUTPUT ON;
 
 DECLARE
+    -- Cache toàn bộ Products vào RAM một lần duy nhất
+    TYPE t_prod_id_arr   IS TABLE OF Products.product_id%TYPE;
+    TYPE t_prod_price_arr IS TABLE OF Products.price%TYPE;
+
+    v_prod_ids    t_prod_id_arr;
+    v_prod_prices t_prod_price_arr;
+    v_prod_count  NUMBER;
+
     v_user_id     NUMBER;
+    v_prod_idx    NUMBER;
     v_prod_id     NUMBER;
     v_order_id    NUMBER;
     v_price       NUMBER(12,2);
@@ -298,70 +304,69 @@ DECLARE
     v_rand_val    NUMBER;
     v_start_count NUMBER;
     v_end_count   NUMBER;
-BEGIN
-    -- Kiểm tra số lượng hiện tại
-    SELECT COUNT(*) INTO v_start_count FROM Order_Items;
-    DBMS_OUTPUT.PUT_LINE('Số lượng Order_Items hiện tại: ' || v_start_count);
-    DBMS_OUTPUT.PUT_LINE('Bắt đầu nạp thêm dữ liệu để đạt mục tiêu ~120,000...');
 
-    -- Chúng ta cần thêm khoảng 90k items. 
-    -- Với trung bình 3 items/order, ta cần tạo thêm 30,000 orders.
+BEGIN
+    -- ✅ Chỉ load 1 LẦN duy nhất vào memory
+    SELECT product_id, price
+    BULK COLLECT INTO v_prod_ids, v_prod_prices
+    FROM Products;
+
+    v_prod_count := v_prod_ids.COUNT;
+    DBMS_OUTPUT.PUT_LINE('Loaded ' || v_prod_count || ' products into memory.');
+
+    SELECT COUNT(*) INTO v_start_count FROM Order_Items;
+    DBMS_OUTPUT.PUT_LINE('Order_Items hien tai: ' || v_start_count);
+
     FOR i IN 1..30000 LOOP
 
-        -- Logic chọn User (giống script e-commerce-data.sql)
         v_rand_val := DBMS_RANDOM.VALUE;
         IF v_rand_val < 0.4 THEN
-            v_user_id := TRUNC(DBMS_RANDOM.VALUE(1,101)); -- Nhóm user mua nhiều
+            v_user_id := TRUNC(DBMS_RANDOM.VALUE(1, 101));
         ELSE
-            v_user_id := TRUNC(DBMS_RANDOM.VALUE(101,1001)); -- Nhóm user vãng lai
+            v_user_id := TRUNC(DBMS_RANDOM.VALUE(101, 1001));
         END IF;
 
-        -- Tạo Order mới
         INSERT INTO Orders (user_id, order_date, total_amount)
         VALUES (
             v_user_id,
-            SYSTIMESTAMP - DBMS_RANDOM.VALUE(0, 365), -- Đơn hàng trong vòng 1 năm qua
+            SYSTIMESTAMP - DBMS_RANDOM.VALUE(0, 365),
             0
         ) RETURNING order_id INTO v_order_id;
 
-        -- Random số lượng item từ 2 đến 5 để nhanh chóng đạt mốc 120k
-        v_num_items := TRUNC(DBMS_RANDOM.VALUE(2, 6));
+        v_num_items   := TRUNC(DBMS_RANDOM.VALUE(2, 6));
         v_order_total := 0;
 
         FOR j IN 1..v_num_items LOOP
             BEGIN
-                -- Lấy ngẫu nhiên sản phẩm tồn tại trong Products
-                SELECT product_id, price
-                INTO v_prod_id, v_price
-                FROM (SELECT product_id, price FROM Products ORDER BY DBMS_RANDOM.VALUE)
-                WHERE ROWNUM = 1;
+                -- ✅ Random index trong array thay vì query DB
+                v_prod_idx := TRUNC(DBMS_RANDOM.VALUE(1, v_prod_count + 1));
+                v_prod_id  := v_prod_ids(v_prod_idx);
+                v_price    := v_prod_prices(v_prod_idx);
 
                 v_item_qty := TRUNC(DBMS_RANDOM.VALUE(1, 4));
 
-                -- Chèn vào Order_Items
                 INSERT INTO Order_Items (order_id, product_id, quantity, unit_price)
                 VALUES (v_order_id, v_prod_id, v_item_qty, v_price);
 
                 v_order_total := v_order_total + (v_item_qty * v_price);
+
             EXCEPTION
-                WHEN DUP_VAL_ON_INDEX THEN 
-                    NULL; -- Bỏ qua nếu trùng product_id trong cùng 1 order
+                WHEN DUP_VAL_ON_INDEX THEN NULL;
             END;
         END LOOP;
 
-        -- Cập nhật tổng tiền cho Order vừa tạo
         UPDATE Orders SET total_amount = v_order_total WHERE order_id = v_order_id;
 
-        -- Batch commit mỗi 2000 đơn hàng để tối ưu hiệu năng[cite: 3]
         IF MOD(i, 2000) = 0 THEN
             COMMIT;
-            DBMS_OUTPUT.PUT_LINE('Đã tạo thêm ' || i || ' đơn hàng...');
+            DBMS_OUTPUT.PUT_LINE('Da tao them ' || i || ' don hang...');
         END IF;
+
     END LOOP;
 
     COMMIT;
     SELECT COUNT(*) INTO v_end_count FROM Order_Items;
-    DBMS_OUTPUT.PUT_LINE('Hoàn tất! Tổng số bản ghi Order_Items hiện tại: ' || v_end_count);
+    DBMS_OUTPUT.PUT_LINE('Hoan tat! Tong Order_Items: ' || v_end_count);
 END;
 /
 
