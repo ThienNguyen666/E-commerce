@@ -1,5 +1,5 @@
 // frontend/app/pages/Cart.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { cartAPI, orderAPI, voucherAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -16,6 +16,9 @@ export default function Cart() {
   const [placing,      setPlacing]      = useState(false);
   const [toast,        setToast]        = useState("");
   const [vouchers,     setVouchers]     = useState<any[]>([]);
+
+  // Thêm useRef để quản lý các timer debounce theo từng product_id
+  const debounceTimers = useRef<{ [key: number]: ReturnType<typeof setTimeout> }>({});
 
   useEffect(() => {
     if (!isAuthenticated) { navigate("/login"); return; }
@@ -42,12 +45,53 @@ export default function Cart() {
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
 
-  const updateQty = async (productId: number, qty: number) => {
-    try {
-      if (qty <= 0) { await cartAPI.remove(productId); }
-      else          { await cartAPI.add(productId, qty); }
-      loadCart(); setVoucherInfo(null);
-    } catch (e: any) { showToast(e.message); }
+  // Hàm updateQty mới sử dụng Optimistic Update và Debounce
+  const updateQty = (productId: number, newQty: number, stock: number) => {
+    if (newQty > stock) {
+      showToast(`Chỉ còn ${stock} sản phẩm trong kho`);
+      return;
+    }
+
+    // 1. Cập nhật UI ngay lập tức (Optimistic Update)
+    setCart((prevCart: any) => {
+      const newItems = prevCart.items.map((item: any) => {
+        if (item.product_id === productId) {
+          return {
+            ...item,
+            quantity: Math.max(0, newQty),
+            subtotal: item.price * Math.max(0, newQty)
+          };
+        }
+        return item;
+      });
+      const newTotal = newItems.reduce((sum: number, i: any) => sum + i.subtotal, 0);
+      return { ...prevCart, items: newItems, total: newTotal };
+    });
+    setVoucherInfo(null); // Hủy voucher vì tổng tiền đã thay đổi
+
+    // 2. Clear timer cũ nếu user tiếp tục bấm liên tục
+    if (debounceTimers.current[productId]) {
+      clearTimeout(debounceTimers.current[productId]);
+    }
+
+    // 3. Set timer mới, chỉ gọi API khi user đã ngừng bấm 500ms
+    debounceTimers.current[productId] = setTimeout(async () => {
+      try {
+        if (newQty <= 0) { 
+          await cartAPI.remove(productId); 
+        } else { 
+          // Gọi hàm update đã cấu hình ở api.ts (có is_update: true)
+          await cartAPI.update(productId, newQty); 
+        }
+        // Gọi lại loadCart để đồng bộ hoàn toàn dữ liệu với server
+        const cartRes = await cartAPI.get();
+        setCart(cartRes.data || { items: [], total: 0 });
+        loadVouchers(cartRes.data?.total || 0);
+      } catch (e: any) { 
+        showToast(e.message); 
+        loadCart(); // Rollback UI nếu gọi API thất bại
+      }
+    }, 500);
   };
 
   const selectVoucher = async (code: string) => {
@@ -110,15 +154,31 @@ export default function Cart() {
                   <p className="text-blue-700 dark:text-blue-400 text-sm font-bold">${Number(item.price).toFixed(2)}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => updateQty(item.product_id, item.quantity - 1)}
+                  <button onClick={() => updateQty(item.product_id, item.quantity - 1, item.stock_quantity)}
                     className="w-7 h-7 border border-gray-300 dark:border-gray-600 rounded text-lg flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700">−</button>
-                  <span className="w-6 text-center font-medium">{item.quantity}</span>
-                  <button onClick={() => updateQty(item.product_id, item.quantity + 1)}
+                  <input 
+                    type="text" 
+                    value={item.quantity}
+                    onChange={(e) => {
+                      // Chỉ cho phép nhập số
+                      const val = e.target.value.replace(/[^0-9]/g, '');
+                      if (val === '') return; // Tạm bỏ qua nếu user xóa trắng để gõ số mới
+                      
+                      let num = parseInt(val, 10);
+                      if (num < 1) num = 1;
+                      if (num > item.stock_quantity) num = item.stock_quantity;
+                      
+                      // Gọi hàm updateQty có sẵn, debounce sẽ tự động gom các lần gõ phím lại
+                      updateQty(item.product_id, num, item.stock_quantity);
+                    }}
+                    className="w-12 h-7 text-center font-medium border border-gray-300 dark:border-gray-600 rounded bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <button onClick={() => updateQty(item.product_id, item.quantity + 1, item.stock_quantity)}
                     disabled={item.quantity >= item.stock_quantity}
                     className="w-7 h-7 border rounded text-lg flex items-center justify-center hover:bg-gray-100 disabled:opacity-40">+</button>
                 </div>
                 <p className="w-20 text-right font-semibold">${Number(item.subtotal).toFixed(2)}</p>
-                <button onClick={() => updateQty(item.product_id, 0)}
+                <button onClick={() => updateQty(item.product_id, 0, item.stock_quantity)}
                   className="text-red-400 hover:text-red-600 dark:hover:text-red-500 text-lg">✕</button>
               </div>
             ))}
