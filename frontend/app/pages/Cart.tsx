@@ -5,7 +5,7 @@ import { cartAPI, orderAPI, voucherAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 export default function Cart() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isInitializing } = useAuth();
   const navigate = useNavigate();
 
   const [cart,         setCart]         = useState<any>({ items: [], total: 0 });
@@ -21,10 +21,11 @@ export default function Cart() {
   const debounceTimers = useRef<{ [key: number]: ReturnType<typeof setTimeout> }>({});
 
   useEffect(() => {
+    if (isInitializing) return;
     if (!isAuthenticated) { navigate("/login"); return; }
     if (user?.is_admin) { navigate("/admin"); return; }
     loadCart();
-  }, [isAuthenticated, user?.is_admin]);
+  }, [isAuthenticated, user, isInitializing, navigate]);
 
   const loadCart = async () => {
     setLoading(true);

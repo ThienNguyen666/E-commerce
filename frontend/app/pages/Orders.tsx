@@ -14,12 +14,13 @@ type OrderRow = {
 
 export default function Orders() {
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isInitializing } = useAuth();
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (isInitializing) return;
     if (!isAuthenticated) {
       navigate("/login");
       return;
@@ -34,7 +35,7 @@ export default function Orders() {
       .then((res: any) => setOrders(res.data || []))
       .catch((e: any) => setError(e.message || "Failed to load orders"))
       .finally(() => setLoading(false));
-  }, [isAuthenticated, user?.is_admin, navigate]); // Added navigate to dependency array for consistency
+  }, [isAuthenticated, user?.is_admin, navigate, isInitializing]); // Added navigate and isInitializing to dependency array for consistency
 
   if (loading) return <div className="text-center py-16 text-gray-500 dark:text-gray-400">Loading orders...</div>;
 
