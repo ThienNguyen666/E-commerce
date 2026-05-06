@@ -65,6 +65,11 @@ export const cartAPI = {
   get:         ()                              => request<any>("/cart"),
   add:         (product_id: number, quantity: number) =>
     request<any>("/cart", { method: "POST", body: JSON.stringify({ product_id, quantity }) }),
+    
+  // HÀM MỚI ĐƯỢC THÊM VÀO ĐỂ FIX LỖI NHẢY SỐ (Gửi kèm is_update: true)
+  update:      (product_id: number, quantity: number) =>
+    request<any>("/cart", { method: "POST", body: JSON.stringify({ product_id, quantity, is_update: true }) }),
+    
   remove:      (product_id: number)            => request<any>(`/cart/${product_id}`, { method: "DELETE" }),
   clear:       ()                              => request<any>("/cart/clear", { method: "DELETE" }),
   merge:       (guestCart: any[])              => request<any>("/cart/merge", { method: "POST", body: JSON.stringify({ guestCart }) }),

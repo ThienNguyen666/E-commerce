@@ -4,14 +4,14 @@ const { initPool } = require("./config/oracle");
 const { connectRedis } = require("./config/redis");
 
 // Routes
-const authRoute            = require("./routes/auth.route");
-const productRoute         = require("./routes/product.route");
-const advancedSearchRoute  = require("./routes/advanced_search.route");
-const cartRoute            = require("./routes/cart.route");
-const orderRoute           = require("./routes/order.route");
-const voucherRoute         = require("./routes/voucher.route");
-const reviewRoute          = require("./routes/review.route");
-const userReviewsRoute     = require("./routes/user_reviews.route");
+const authRoute               = require("./routes/auth.route");
+const productRoute            = require("./routes/product.route");
+const advancedSearchRoute     = require("./routes/advanced_search.route");
+const cartRoute               = require("./routes/cart.route");
+const orderRoute              = require("./routes/order.route");
+const voucherRoute            = require("./routes/voucher.route");
+const reviewRoute             = require("./routes/review.route");
+const userReviewsRoute        = require("./routes/user_reviews.route");
 const viewSalesAnalyticsRoute = require("./routes/view_sales_analytics.route");
 
 const errorHandler = require("./middleware/error_handler.middleware");
