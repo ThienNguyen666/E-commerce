@@ -4,7 +4,7 @@ import { reviewAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 export default function Review() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isInitializing } = useAuth();
   const navigate = useNavigate();
 
   const [reviewedProducts, setReviewedProducts] = useState<any[]>([]);
@@ -13,6 +13,7 @@ export default function Review() {
   const [activeTab, setActiveTab] = useState<'reviewed' | 'to-review'>('reviewed');
 
   useEffect(() => {
+    if (isInitializing) return;
     if (!isAuthenticated) {
       navigate("/login");
       return;
@@ -22,7 +23,7 @@ export default function Review() {
       return;
     }
     loadData();
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, isInitializing, navigate]);
 
   const loadData = async () => {
     try {
