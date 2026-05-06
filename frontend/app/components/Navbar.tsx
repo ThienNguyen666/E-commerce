@@ -1,4 +1,3 @@
-// frontend/app/components/Navbar.tsx
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router";
 import { useAuth } from "../context/AuthContext";
@@ -34,7 +33,9 @@ export default function Navbar() {
 
   return (
     <nav className="bg-blue-700 text-white px-6 py-3 flex items-center justify-between shadow-md">
-      <Link to="/" className="text-xl font-bold tracking-wide">🛒 ShopApp</Link>
+      {/* Đã sửa đường dẫn ở dòng dưới đây */}
+      <Link to={isAdmin ? "/admin" : "/"} className="text-xl font-bold tracking-wide">🛒 ShopApp</Link>
+      
       <div className="flex items-center gap-4 text-sm">
         {!isAdmin && <Link to="/products" className="hover:underline">Products</Link>}
         {isAuthenticated && isAdmin && <Link to="/admin" className="hover:underline">Admin</Link>}

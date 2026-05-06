@@ -85,6 +85,7 @@ export default function Admin() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [page, setPage] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0); // Đã thêm state lưu tổng số sản phẩm
   const [form, setForm] = useState<ProductForm>({ name: "", price: "", stock_quantity: "", category_id: "" });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -94,12 +95,9 @@ export default function Admin() {
 
   const hasFilters = useMemo(() => Boolean(searchQuery.trim() || categoryFilter), [searchQuery, categoryFilter]);
 
-  const totalProducts = useMemo(() => products.length, [products]);
-  const totalStock = useMemo(() => products.reduce((sum, item) => sum + item.STOCK_QUANTITY, 0), [products]);
-  const totalStockValue = useMemo(
-    () => products.reduce((sum, item) => sum + item.PRICE * item.STOCK_QUANTITY, 0),
-    [products]
-  );
+  // Đã xóa useMemo của totalProducts ở đây
+  const [totalStock, setTotalStock] = useState(0);
+  const [totalStockValue, setTotalStockValue] = useState(0);
 
   const showToast = useCallback((message: string, type: "success" | "error" = "success") => {
     setToastType(type);
@@ -128,11 +126,23 @@ export default function Admin() {
         const params: Record<string, string> = { page: String(page), limit: String(PAGE_SIZE) };
         if (searchQuery.trim().length > 0) params.name = searchQuery.trim();
         if (categoryFilter) params.categoryId = categoryFilter;
+        
         const response = await productAPI.search(params);
         setProducts(response.data || []);
+        
+        // Cập nhật thống kê tìm kiếm
+        setTotalProducts(response.pagination?.total || 0); 
+        setTotalStock(response.stats?.totalStock || 0);
+        setTotalStockValue(response.stats?.totalStockValue || 0);
+
       } else {
         const response = await productAPI.getAll(page, PAGE_SIZE);
         setProducts(response.data || []);
+        
+        // Cập nhật thống kê toàn bộ
+        setTotalProducts(response.pagination?.total || 0);
+        setTotalStock(response.stats?.totalStock || 0);
+        setTotalStockValue(response.stats?.totalStockValue || 0);
       }
     } catch (e: any) {
       setError(e.message || "Unable to load admin data.");

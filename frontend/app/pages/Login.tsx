@@ -13,9 +13,13 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // 1. SỬA LỖI RACE CONDITION: Chỉ điều hướng khi user đã được load vào context
   useEffect(() => {
-    if (isAuthenticated) navigate(user?.is_admin ? "/admin" : "/products");
-  }, [isAuthenticated, user?.is_admin, navigate]);
+    if (isAuthenticated && user) {
+      const isAdmin = user.is_admin === true;
+      navigate(isAdmin ? "/admin" : "/products");
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const handleSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -32,7 +36,12 @@ export default function Login() {
       const res = await authAPI.login(email, password);
       login(res.token, res.user);
       await handleLoginSuccess(res.user);
-      navigate(res.user?.is_admin ? "/admin" : "/products");
+      
+      // 2. CHECK CẢ TRƯỜNG HỢP KEY IN HOA TỪ ORACLE
+      const loggedUser = res.user;
+      const isAdmin = loggedUser?.is_admin === 1 || loggedUser?.is_admin === true || loggedUser?.IS_ADMIN === 1 || loggedUser?.IS_ADMIN === true;
+      
+      navigate(isAdmin ? "/admin" : "/products");
 
     } catch (err: any) {
       setError(err.message || "Login failed");
@@ -49,8 +58,6 @@ export default function Login() {
         localStorage.removeItem('guest_cart');
     }
   };
-
-
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-64px)] bg-gray-50 dark:bg-gray-950 px-4 py-12 transition-colors duration-500">
