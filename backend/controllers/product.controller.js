@@ -1,6 +1,7 @@
 const db = require('../config/oracle');
 
 // GET all products (paginated)
+// GET all products (paginated)
 const getAllProducts = async (req, res, next) => {
   let connection;
   try {
@@ -12,7 +13,9 @@ const getAllProducts = async (req, res, next) => {
     const result = await connection.execute(
       `SELECT p.product_id, p.name, p.price, p.stock_quantity,
               p.category_id, c.category_name,
-              COUNT(*) OVER() AS total_count
+              COUNT(*) OVER() AS total_count,
+              SUM(p.stock_quantity) OVER() AS total_stock,
+              SUM(p.price * p.stock_quantity) OVER() AS total_stock_value
        FROM Products p
        JOIN Categories c ON p.category_id = c.category_id
        ORDER BY p.created_at DESC
@@ -22,10 +25,14 @@ const getAllProducts = async (req, res, next) => {
     );
 
     const total = result.rows.length > 0 ? result.rows[0].TOTAL_COUNT : 0;
+    const totalStock = result.rows.length > 0 ? result.rows[0].TOTAL_STOCK : 0;
+    const totalStockValue = result.rows.length > 0 ? result.rows[0].TOTAL_STOCK_VALUE : 0;
+
     res.status(200).json({
       success: true,
-      data: result.rows.map(({ TOTAL_COUNT, ...rest }) => rest),
-      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) }
+      data: result.rows.map(({ TOTAL_COUNT, TOTAL_STOCK, TOTAL_STOCK_VALUE, ...rest }) => rest),
+      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      stats: { totalStock, totalStockValue }
     });
   } catch (err) { next(err); }
   finally { if (connection) await connection.close(); }

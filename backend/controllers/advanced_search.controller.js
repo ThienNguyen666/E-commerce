@@ -14,11 +14,13 @@ const searchProducts = async (req, res, next) => {
 
             const products = result.rows;
             const totalRecords = products.length > 0 ? products[0].TOTAL_COUNT : 0;
+            const totalStock = products.length > 0 ? products[0].TOTAL_STOCK : 0;             
+            const totalStockValue = products.length > 0 ? products[0].TOTAL_STOCK_VALUE : 0;   
 
             res.status(200).json({
                   success: true,
                   data: products.map(p => {
-                        const { TOTAL_COUNT, ...rest } = p;
+                        const { TOTAL_COUNT, TOTAL_STOCK, TOTAL_STOCK_VALUE, ...rest } = p; 
                         return rest;
                   }),
                   pagination: {
@@ -26,7 +28,8 @@ const searchProducts = async (req, res, next) => {
                         page: req.query.page,
                         limit: req.query.limit,
                         totalPages: Math.ceil(totalRecords / req.query.limit)
-                  }
+                  },
+                  stats: { totalStock, totalStockValue } 
             });
 
             } catch (error) {

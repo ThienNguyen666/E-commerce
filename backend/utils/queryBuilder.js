@@ -12,8 +12,10 @@ const buildSearchQuery = (filters) => {
 
       let sql = `
       SELECT p.product_id, p.name, p.price, p.stock_quantity, 
-            c.category_name, p.category_id,
-            COUNT(*) OVER() AS total_count
+             c.category_name, p.category_id,
+             COUNT(*) OVER() AS total_count,
+             SUM(p.stock_quantity) OVER() AS total_stock,
+             SUM(p.price * p.stock_quantity) OVER() AS total_stock_value
       FROM Products p
       JOIN Categories c ON p.category_id = c.category_id
       WHERE 1=1
@@ -49,7 +51,7 @@ const buildSearchQuery = (filters) => {
 
       // Pagination
       sql += ` ORDER BY p.created_at DESC 
-            OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY`;
+             OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY`;
 
       binds.offset = offset;
       binds.limit = limitNumber;
